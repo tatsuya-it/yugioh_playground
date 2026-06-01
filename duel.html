@@ -975,14 +975,19 @@
       function renderHand() {
         const area = document.getElementById("hand-area");
         area.innerHTML = "";
-        hand.forEach((card) => {
+        const q = getSearchQueries();
+        const hasQuery = Object.values(q).some(Boolean);
+        const sorted = hasQuery
+          ? [...hand].sort((a, b) => matchCard(b, q) - matchCard(a, q))
+          : hand;
+        sorted.forEach((card) => {
           const img = makeCardImg(card, false, false);
           img.dataset.uid = card.uid;
           img.dataset.zone = "hand";
+          if (hasQuery && matchCard(card, q)) img.classList.add("highlight-card");
           area.appendChild(img);
         });
         document.getElementById("hand-count").textContent = hand.length;
-        applyHighlight();
       }
 
       function renderAllZones() {
@@ -1053,64 +1058,57 @@
       }
 
       function renderPiles() {
-        // デッキ（モンスター→魔法→罠、各50音順）
+        const q = getSearchQueries();
+        const hasQuery = Object.values(q).some(Boolean);
+
+        function sortWithHit(arr, sortFn) {
+          const sorted = sortFn(arr);
+          if (!hasQuery) return sorted;
+          return [
+            ...sorted.filter(c => matchCard(c, q)),
+            ...sorted.filter(c => !matchCard(c, q)),
+          ];
+        }
+
+        function appendCards(pile, cards, zone, ctxFn) {
+          pile.innerHTML = "";
+          cards.forEach((card, i) => {
+            const img = makePileImg(card, zone);
+            if (zone === "grave") img.dataset.idx = i;
+            if (hasQuery && matchCard(card, q)) img.classList.add("highlight-card");
+            img.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              ctxFn(card, i, e);
+            });
+            pile.appendChild(img);
+          });
+        }
+
+        // デッキ（モンスター→魔法→罠、各50音順、ヒット優先）
         const deckPile = document.getElementById("deck-pile");
-        deckPile.innerHTML = "";
         document.getElementById("deck-count").textContent = deck.length;
-        sortByTypeAndName(deck).forEach((card) => {
-          const img = makePileImg(card, "deck");
-          img.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            ctxTarget = { uid: card.uid, zone: "deck" };
-            showCtxMenu(e);
-          });
-          deckPile.appendChild(img);
-        });
+        appendCards(deckPile, sortWithHit(deck, sortByTypeAndName), "deck",
+          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "deck" }; showCtxMenu(e); });
 
-        // 墓地
+        // 墓地（ヒット優先→上に）
         const gravePile = document.getElementById("grave-pile");
-        gravePile.innerHTML = "";
         document.getElementById("grave-count").textContent = graveyard.length;
-        graveyard.forEach((card, i) => {
-          const img = makePileImg(card, "grave");
-          img.dataset.idx = i;
-          img.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            ctxTarget = { uid: card.uid, zone: "grave" };
-            graveCtxIdx = i;
-            showCtxMenu(e);
-          });
-          gravePile.appendChild(img);
-        });
+        appendCards(gravePile, sortWithHit(graveyard, a => [...a]), "grave",
+          (card, i, e) => { ctxTarget = { uid: card.uid, zone: "grave" }; graveCtxIdx = i; showCtxMenu(e); });
 
-        // 除外
+        // 除外（ヒット優先→上に）
         const removedPile = document.getElementById("removed-pile");
-        removedPile.innerHTML = "";
         document.getElementById("removed-count").textContent = removed.length;
-        removed.forEach((card, i) => {
-          const img = makePileImg(card, "removed");
-          img.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            ctxTarget = { uid: card.uid, zone: "removed" };
-            showCtxMenu(e);
-          });
-          removedPile.appendChild(img);
-        });
+        appendCards(removedPile, sortWithHit(removed, a => [...a]), "removed",
+          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "removed" }; showCtxMenu(e); });
 
-        // EXデッキ（50音順）
+        // EXデッキ（50音順、ヒット優先）
         const extraPile = document.getElementById("extra-pile");
-        extraPile.innerHTML = "";
         document.getElementById("extra-count").textContent = extraDeck.length;
-        [...extraDeck].sort((a, b) => (a.name || "").localeCompare(b.name || "", "ja")).forEach((card) => {
-          const img = makePileImg(card, "extra");
-          img.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            ctxTarget = { uid: card.uid, zone: "extra" };
-            showCtxMenu(e);
-          });
-          extraPile.appendChild(img);
-        });
-        applyHighlight();
+        appendCards(extraPile,
+          sortWithHit(extraDeck, a => [...a].sort((x, y) => (x.name||"").localeCompare(y.name||"","ja"))),
+          "extra",
+          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "extra" }; showCtxMenu(e); });
       }
 
       function makePileImg(card, zone) {
@@ -1419,30 +1417,15 @@
       }
 
       function applyHighlight() {
-        document.querySelectorAll(".pile-grid img, #hand-area .card-img").forEach(el => {
-          el.classList.remove("highlight-card");
-        });
-
-        const q = getSearchQueries();
-        if (!Object.values(q).some(Boolean)) return;
-
-        [
-          ...deck.map(c => ({ card: c, zone: "deck" })),
-          ...extraDeck.map(c => ({ card: c, zone: "extra" })),
-          ...hand.map(c => ({ card: c, zone: "hand" })),
-        ].forEach(({ card, zone }) => {
-          if (!matchCard(card, q)) return;
-          const selector = zone === "hand"
-            ? `#hand-area .card-img[data-uid="${card.uid}"]`
-            : `.pile-grid img[data-uid="${card.uid}"]`;
-          document.querySelectorAll(selector).forEach(el => el.classList.add("highlight-card"));
-        });
+        renderHand();
+        renderPiles();
       }
 
       function clearAllSearch() {
         ["search-name","search-text","search-attr","search-race","search-atk","search-def"]
           .forEach(id => document.getElementById(id).value = "");
-        applyHighlight();
+        renderHand();
+        renderPiles();
       }
 
       document.addEventListener("DOMContentLoaded", () => {
