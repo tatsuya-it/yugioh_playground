@@ -539,6 +539,21 @@
         text-align: right;
       }
       .search-clear:hover { color: #eee; }
+      .search-mode-btn {
+        flex: 1;
+        padding: 3px 0;
+        border: 1px solid #334;
+        border-radius: 4px;
+        background: #0f1e2e;
+        color: #888;
+        font-size: 0.7rem;
+        cursor: pointer;
+      }
+      .search-mode-btn.active {
+        background: #1e3a5f;
+        color: #f0c040;
+        border-color: #f0c040;
+      }
       /* ハイライト */
       .highlight-card {
         box-shadow: 0 0 8px 3px #f0c040, 0 0 16px 6px rgba(240,192,64,0.5) !important;
@@ -642,11 +657,22 @@
             <!-- 左: 検索パネル -->
             <div id="search-panel">
               <label>🔍 カード名</label>
-              <input id="search-name" type="text" placeholder="トゥーン、龍、…" />
-              <span class="search-clear" onclick="clearSearch('name')">クリア</span>
+              <input id="search-name" type="text" placeholder="トゥーン、龍…" />
               <label>🔍 カードテキスト</label>
               <input id="search-text" type="text" placeholder="テキスト検索…" />
-              <span class="search-clear" onclick="clearSearch('text')">クリア</span>
+              <label>🔍 属性</label>
+              <input id="search-attr" type="text" placeholder="炕、水、闇…" />
+              <label>🔍 種族</label>
+              <input id="search-race" type="text" placeholder="龍族、戦士族…" />
+              <label>🔍 ATK</label>
+              <input id="search-atk" type="text" placeholder="2500" />
+              <label>🔍 DEF</label>
+              <input id="search-def" type="text" placeholder="2000" />
+              <div style="display:flex;gap:4px;margin-top:4px;">
+                <button class="search-mode-btn active" id="btn-and" onclick="setSearchMode('and')">AND</button>
+                <button class="search-mode-btn" id="btn-or" onclick="setSearchMode('or')">OR</button>
+              </div>
+              <span class="search-clear" onclick="clearAllSearch()">全てクリア</span>
             </div>
             <div class="field-zones">
               <!-- EXモンスターゾーン: 左にフィールドゾーンを隔隔で配置 -->
@@ -1358,50 +1384,70 @@
       }
 
       // ===== カード検索・ハイライト =====
-      function applyHighlight() {
-        const nameQ = document.getElementById("search-name").value.trim();
-        const textQ = document.getElementById("search-text").value.trim();
+      let searchMode = 'and';
 
-        // 全imgのハイライトをリセット
+      function setSearchMode(mode) {
+        searchMode = mode;
+        document.getElementById('btn-and').classList.toggle('active', mode === 'and');
+        document.getElementById('btn-or').classList.toggle('active', mode === 'or');
+        applyHighlight();
+      }
+
+      function getSearchQueries() {
+        return {
+          name: document.getElementById("search-name").value.trim(),
+          text: document.getElementById("search-text").value.trim(),
+          attr: document.getElementById("search-attr").value.trim(),
+          race: document.getElementById("search-race").value.trim(),
+          atk:  document.getElementById("search-atk").value.trim(),
+          def:  document.getElementById("search-def").value.trim(),
+        };
+      }
+
+      function matchCard(card, q) {
+        const checks = [
+          q.name && ((card.name || "").includes(q.name) || (card.ruby || "").includes(q.name)),
+          q.text && (card.text || "").includes(q.text),
+          q.attr && (card.attribute || "").includes(q.attr),
+          q.race && (card.race || "").includes(q.race),
+          q.atk  && String(card.atk  ?? "") === q.atk,
+          q.def  && String(card.def  ?? "") === q.def,
+        ].filter((_, i) => Object.values(q)[i]);
+
+        if (!checks.length) return false;
+        return searchMode === 'and' ? checks.every(Boolean) : checks.some(Boolean);
+      }
+
+      function applyHighlight() {
         document.querySelectorAll(".pile-grid img, #hand-area .card-img").forEach(el => {
           el.classList.remove("highlight-card");
         });
 
-        if (!nameQ && !textQ) return;
+        const q = getSearchQueries();
+        if (!Object.values(q).some(Boolean)) return;
 
-        // 検索対象: deck, extraDeck, hand
-        const targets = [
+        [
           ...deck.map(c => ({ card: c, zone: "deck" })),
           ...extraDeck.map(c => ({ card: c, zone: "extra" })),
           ...hand.map(c => ({ card: c, zone: "hand" })),
-        ];
-
-        targets.forEach(({ card, zone }) => {
-          const matchName = nameQ && (
-            (card.name || "").includes(nameQ) ||
-            (card.ruby || "").includes(nameQ)
-          );
-          const matchText = textQ && (card.text || "").includes(textQ);
-          if (!matchName && !matchText) return;
-
-          // 対応するimg要素を見つけてハイライト
+        ].forEach(({ card, zone }) => {
+          if (!matchCard(card, q)) return;
           const selector = zone === "hand"
             ? `#hand-area .card-img[data-uid="${card.uid}"]`
             : `.pile-grid img[data-uid="${card.uid}"]`;
-          document.querySelectorAll(selector).forEach(el => {
-            el.classList.add("highlight-card");
-          });
+          document.querySelectorAll(selector).forEach(el => el.classList.add("highlight-card"));
         });
       }
 
-      function clearSearch(type) {
-        document.getElementById(type === "name" ? "search-name" : "search-text").value = "";
+      function clearAllSearch() {
+        ["search-name","search-text","search-attr","search-race","search-atk","search-def"]
+          .forEach(id => document.getElementById(id).value = "");
         applyHighlight();
       }
 
       document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("search-name").addEventListener("input", applyHighlight);
-        document.getElementById("search-text").addEventListener("input", applyHighlight);
+        ["search-name","search-text","search-attr","search-race","search-atk","search-def"]
+          .forEach(id => document.getElementById(id).addEventListener("input", applyHighlight));
       });
     </script>
   </body>
