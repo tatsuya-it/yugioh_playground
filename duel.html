@@ -129,7 +129,7 @@
       #field-area {
         flex: 1;
         display: grid;
-        grid-template-columns: 1fr 242px;
+        grid-template-columns: 160px 1fr 242px;
         gap: 4px;
         min-height: 0;
       }
@@ -504,7 +504,46 @@
         margin-top: 20px;
       }
 
-      /* Token counter badge */
+      /* 検索パネル */
+      #search-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid #223;
+        border-radius: 8px;
+        overflow-y: auto;
+      }
+      #search-panel label {
+        font-size: 0.65rem;
+        color: #f0c040;
+      }
+      #search-panel input {
+        width: 100%;
+        padding: 4px 6px;
+        background: #0f1e2e;
+        border: 1px solid #334;
+        border-radius: 4px;
+        color: #eee;
+        font-size: 0.75rem;
+      }
+      #search-panel input:focus {
+        outline: none;
+        border-color: #f0c040;
+      }
+      .search-clear {
+        font-size: 0.65rem;
+        color: #888;
+        cursor: pointer;
+        text-align: right;
+      }
+      .search-clear:hover { color: #eee; }
+      /* ハイライト */
+      .highlight-card {
+        box-shadow: 0 0 8px 3px #f0c040, 0 0 16px 6px rgba(240,192,64,0.5) !important;
+        border-radius: 4px;
+      }
       .token-badge {
         position: absolute;
         top: 2px;
@@ -600,6 +639,15 @@
         <!-- 左: フィールド＋下部エリア -->
         <div id="field">
           <div id="field-area">
+            <!-- 左: 検索パネル -->
+            <div id="search-panel">
+              <label>🔍 カード名</label>
+              <input id="search-name" type="text" placeholder="トゥーン、龍、…" />
+              <span class="search-clear" onclick="clearSearch('name')">クリア</span>
+              <label>🔍 カードテキスト</label>
+              <input id="search-text" type="text" placeholder="テキスト検索…" />
+              <span class="search-clear" onclick="clearSearch('text')">クリア</span>
+            </div>
             <div class="field-zones">
               <!-- EXモンスターゾーン: 左にフィールドゾーンを隔隔で配置 -->
               <div class="zone-row" id="my-ex-mon-row">
@@ -908,6 +956,7 @@
           area.appendChild(img);
         });
         document.getElementById("hand-count").textContent = hand.length;
+        applyHighlight();
       }
 
       function renderAllZones() {
@@ -1035,6 +1084,7 @@
           });
           extraPile.appendChild(img);
         });
+        applyHighlight();
       }
 
       function makePileImg(card, zone) {
@@ -1306,6 +1356,53 @@
         document.getElementById("lp-val").textContent = lp;
         document.getElementById("lp-editor").style.display = "none";
       }
+
+      // ===== カード検索・ハイライト =====
+      function applyHighlight() {
+        const nameQ = document.getElementById("search-name").value.trim();
+        const textQ = document.getElementById("search-text").value.trim();
+
+        // 全imgのハイライトをリセット
+        document.querySelectorAll(".pile-grid img, #hand-area .card-img").forEach(el => {
+          el.classList.remove("highlight-card");
+        });
+
+        if (!nameQ && !textQ) return;
+
+        // 検索対象: deck, extraDeck, hand
+        const targets = [
+          ...deck.map(c => ({ card: c, zone: "deck" })),
+          ...extraDeck.map(c => ({ card: c, zone: "extra" })),
+          ...hand.map(c => ({ card: c, zone: "hand" })),
+        ];
+
+        targets.forEach(({ card, zone }) => {
+          const matchName = nameQ && (
+            (card.name || "").includes(nameQ) ||
+            (card.ruby || "").includes(nameQ)
+          );
+          const matchText = textQ && (card.text || "").includes(textQ);
+          if (!matchName && !matchText) return;
+
+          // 対応するimg要素を見つけてハイライト
+          const selector = zone === "hand"
+            ? `#hand-area .card-img[data-uid="${card.uid}"]`
+            : `.pile-grid img[data-uid="${card.uid}"]`;
+          document.querySelectorAll(selector).forEach(el => {
+            el.classList.add("highlight-card");
+          });
+        });
+      }
+
+      function clearSearch(type) {
+        document.getElementById(type === "name" ? "search-name" : "search-text").value = "";
+        applyHighlight();
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("search-name").addEventListener("input", applyHighlight);
+        document.getElementById("search-text").addEventListener("input", applyHighlight);
+      });
     </script>
   </body>
 </html>
