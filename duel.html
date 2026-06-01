@@ -142,7 +142,7 @@
       }
       .zone-row {
         display: flex;
-        gap: 4px;
+        gap: 10px;
         justify-content: center;
         align-items: center;
       }
@@ -771,6 +771,13 @@
       </div>
     </div>
 
+    <!-- Place Mode Popup -->
+    <div id="place-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a2a3a;border:1px solid #334;border-radius:12px;padding:20px;z-index:3000;min-width:200px;">
+      <div id="place-popup-title" style="font-size:0.9rem;color:#f0c040;margin-bottom:14px;text-align:center;"></div>
+      <div id="place-popup-btns" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <button onclick="cancelPlace()" style="margin-top:12px;width:100%;padding:6px;background:#334;border:none;border-radius:6px;color:#eee;cursor:pointer;font-size:0.85rem;">キャンセル</button>
+    </div>
+
     <!-- Context Menu -->
     <div id="ctx-menu">
       <div onclick="ctxAction('to-hand')">手札に戻す</div>
@@ -1248,7 +1255,13 @@
         } else if (toZone === "extra") {
           extraDeck.push(card);
         } else {
-          // フィールドゾーン: 既存カードは手札へ
+          // フィールドゾーン: モンスター/魔法罠はポップアップで表示形式を選択
+          const isMonster = /^(mon-|ex-mon-)/.test(toZone);
+          const isSpellTrap = /^st-/.test(toZone);
+          if ((isMonster || isSpellTrap) && (from.zone === "hand" || from.zone === "deck" || from.zone === "extra" || from.zone === "grave" || from.zone === "removed")) {
+            showPlacePopup(card, toZone, isMonster, from);
+            return;
+          }
           if (fieldCards[toZone]) {
             hand.push(fieldCards[toZone].card);
             renderHand();
@@ -1368,6 +1381,76 @@
     ${info ? `<div id="card-detail-info">${info.replace(/\n/g, "<br>")}</div>` : ""}
     ${card.text ? `<div id="card-detail-text">${card.text}</div>` : ""}
   `;
+      }
+
+      // ===== 配置モードポップアップ =====
+      let pendingPlace = null;
+
+      function showPlacePopup(card, toZone, isMonster, from) {
+        pendingPlace = { card, toZone, from };
+        const popup = document.getElementById("place-popup");
+        const title = document.getElementById("place-popup-title");
+        const btns = document.getElementById("place-popup-btns");
+        title.textContent = isMonster ? "表示形式を選んでください" : "表示形式を選んでください";
+        btns.innerHTML = "";
+        const options = isMonster
+          ? [
+              { label: "攻撃表示", facedown: false, defense: false },
+              { label: "守備表示", facedown: false, defense: true },
+              { label: "裏側表示", facedown: true,  defense: true },
+            ]
+          : [
+              { label: "表", facedown: false, defense: false },
+              { label: "裏", facedown: true,  defense: false },
+            ];
+        options.forEach(opt => {
+          const btn = document.createElement("button");
+          btn.textContent = opt.label;
+          btn.style.cssText = "padding:8px;background:#1e3a5f;border:none;border-radius:6px;color:#eee;cursor:pointer;font-size:0.9rem;";
+          btn.onmouseover = () => btn.style.background = "#2a5080";
+          btn.onmouseout  = () => btn.style.background = "#1e3a5f";
+          btn.onclick = () => confirmPlace(opt.facedown, opt.defense);
+          btns.appendChild(btn);
+        });
+        popup.style.display = "block";
+      }
+
+      function confirmPlace(facedown, defense) {
+        document.getElementById("place-popup").style.display = "none";
+        if (!pendingPlace) return;
+        const { card, toZone } = pendingPlace;
+        pendingPlace = null;
+        if (fieldCards[toZone]) {
+          hand.push(fieldCards[toZone].card);
+          renderHand();
+        }
+        fieldCards[toZone] = { card, facedown, defense };
+        renderZone(toZone);
+        renderPiles();
+      }
+
+      function cancelPlace() {
+        document.getElementById("place-popup").style.display = "none";
+        if (!pendingPlace) return;
+        const { card, from } = pendingPlace;
+        pendingPlace = null;
+        // 元の場所に戻す
+        if (from.zone === "hand") {
+          hand.push(card);
+          renderHand();
+        } else if (from.zone === "deck") {
+          deck.push(card);
+          renderPiles();
+        } else if (from.zone === "grave") {
+          graveyard.push(card);
+          renderPiles();
+        } else if (from.zone === "removed") {
+          removed.push(card);
+          renderPiles();
+        } else if (from.zone === "extra") {
+          extraDeck.push(card);
+          renderPiles();
+        }
       }
 
       // ===== LP =====
