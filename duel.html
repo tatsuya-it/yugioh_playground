@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>デュエルシミュレーター</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #0d1b2a;
+        color: #eee;
+        font-family: sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ---- Setup Screen ---- */
+      #setup-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 16px;
+        padding: 24px;
+      }
+      #setup-screen h1 {
+        font-size: 1.6rem;
+        color: #f0c040;
+      }
+      #setup-screen textarea {
+        width: 360px;
+        height: 200px;
+        background: #1a2a3a;
+        color: #eee;
+        border: 1px solid #334;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 0.95rem;
+        resize: vertical;
+      }
+      #setup-screen p {
+        font-size: 0.85rem;
+        color: #aaa;
+      }
+      #start-btn {
+        padding: 12px 32px;
+        background: #e94560;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #start-btn:hover {
+        background: #c73652;
+      }
+      #setup-error {
+        color: #e94560;
+        font-size: 0.9rem;
+      }
+      #loading-msg {
+        color: #aaa;
+      }
+
+      /* ---- Duel Screen ---- */
+      #duel-screen {
+        display: none;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* Top bar */
+      #topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 12px;
+        background: #111;
+        border-bottom: 1px solid #333;
+        flex-shrink: 0;
+      }
+      #topbar h2 {
+        font-size: 1rem;
+        color: #f0c040;
+        flex: 1;
+      }
+      .topbar-btn {
+        padding: 5px 14px;
+        border: none;
+        border-radius: 6px;
+        background: #1e3a5f;
+        color: #eee;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      .topbar-btn:hover {
+        background: #2a5080;
+      }
+      #lp-display {
+        font-size: 0.9rem;
+        color: #8cf;
+      }
+
+      /* メイン2カラムレイアウト */
+      #duel-body {
+        flex: 1;
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      /* 左: フィールド＋下部エリア */
+      #field {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #field-area {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 200px;
+        gap: 4px;
+        min-height: 0;
+      }
+      .field-zones {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        justify-content: center;
+        min-height: 0;
+      }
+      .zone-row {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+        align-items: center;
+      }
+      .zone {
+        width: 72px;
+        height: 100px;
+        border: 1px dashed #334;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        color: #556;
+        flex-shrink: 0;
+      }
+      .zone.drag-over {
+        border-color: #f0c040;
+        background: rgba(240, 192, 64, 0.1);
+      }
+      .zone-label {
+        position: absolute;
+        bottom: 2px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 0.55rem;
+        color: #556;
+        pointer-events: none;
+      }
+      .side-col {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+        justify-content: center;
+      }
+      .side-zone {
+        width: 60px;
+        height: 84px;
+        border: 1px dashed #334;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        color: #556;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .side-zone:hover {
+        border-color: #88aacc;
+      }
+      .side-zone .zone-label {
+        font-size: 0.5rem;
+      }
+
+      /* 下部エリア: 手札＋EX、デッキ */
+      #bottom-area {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex-shrink: 0;
+        min-height: 0;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 6px;
+        padding: 4px;
+      }
+      /* 手札行: 手札 + EXデッキ */
+      #hand-ex-row {
+        display: flex;
+        gap: 4px;
+        min-height: 0;
+      }
+      /* 手札 */
+      #hand-section {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      #hand-area {
+        flex: 1;
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        overflow-x: auto;
+        padding: 2px 4px;
+      }
+      /* pile共通 */
+      .pile-section {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid #223;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      /* EXデッキ: 手札2:EX3 の比率 */
+      #extra-section {
+        flex: 3;
+        min-width: 0;
+      }
+      /* デッキ: 手札下（40〜60枚横並び） */
+      #deck-section {
+        width: 100%;
+      }
+      /* 墓地・除外: フィールド右側縦配置 */
+      .pile-section.vertical {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+      }
+      .pile-title {
+        font-size: 0.7rem;
+        color: #f0c040;
+        padding: 2px 6px;
+        background: rgba(0, 0, 0, 0.3);
+        flex-shrink: 0;
+      }
+      .pile-grid {
+        flex: 1;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 3px;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 3px;
+        align-items: center;
+      }
+      .pile-grid.vertical-scroll {
+        overflow-x: hidden;
+        overflow-y: auto;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        align-content: flex-start;
+      }
+      .pile-grid img {
+        width: 44px;
+        height: 62px;
+        border-radius: 3px;
+        object-fit: cover;
+        cursor: grab;
+        flex-shrink: 0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      }
+      .pile-grid img:hover {
+        transform: scale(1.1);
+        z-index: 10;
+        position: relative;
+      }
+      .pile-grid.drag-over {
+        outline: 2px solid #f0c040;
+        background: rgba(240, 192, 64, 0.08);
+      }
+      .bottom-label {
+        font-size: 0.65rem;
+        color: #556;
+        white-space: nowrap;
+        padding: 0 4px;
+      }
+      /* 右サイドカラム（墓地・除外）: 横並び縦長 */
+      #right-side-col {
+        display: flex;
+        flex-direction: row;
+        gap: 4px;
+        width: 200px;
+        flex-shrink: 0;
+        min-height: 0;
+      }
+
+      /* Cards (フィールド・手札) */
+      .card-img {
+        width: 72px;
+        height: 100px;
+        border-radius: 4px;
+        object-fit: cover;
+        cursor: grab;
+        user-select: none;
+        display: block;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+        transition: transform 0.1s;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      .card-img:hover {
+        transform: scale(1.05);
+        z-index: 10;
+      }
+      .card-img.defense {
+        transform: rotate(90deg);
+      }
+      .card-img.defense:hover {
+        transform: rotate(90deg) scale(1.05);
+      }
+      .card-img.facedown {
+        filter: brightness(0.15);
+      }
+      .card-img.facedown.defense {
+        transform: rotate(90deg);
+        filter: brightness(0.15);
+      }
+      #hand-area .card-img {
+        position: relative;
+        width: 44px;
+        height: 62px;
+        flex-shrink: 0;
+      }
+      #hand-area .card-img.defense {
+        transform: none;
+      }
+
+      /* Context menu */
+      #ctx-menu {
+        position: fixed;
+        background: #1a2a3a;
+        border: 1px solid #334;
+        border-radius: 8px;
+        padding: 4px 0;
+        z-index: 1000;
+        display: none;
+        min-width: 160px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      }
+      #ctx-menu div {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      #ctx-menu div:hover {
+        background: #2a3a4a;
+      }
+      #ctx-menu .sep {
+        height: 1px;
+        background: #334;
+        margin: 4px 0;
+        padding: 0;
+        cursor: default;
+      }
+      #ctx-menu .sep:hover {
+        background: #334;
+      }
+
+      /* LP editor */
+      #lp-editor {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #1a2a3a;
+        border: 1px solid #334;
+        border-radius: 12px;
+        padding: 20px;
+        z-index: 2000;
+        display: none;
+        min-width: 240px;
+      }
+      #lp-editor h3 {
+        margin-bottom: 12px;
+        color: #f0c040;
+      }
+      #lp-editor input {
+        width: 100%;
+        padding: 8px;
+        background: #0f1e2e;
+        border: 1px solid #334;
+        border-radius: 6px;
+        color: #eee;
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+      #lp-editor .lp-btns {
+        display: flex;
+        gap: 8px;
+      }
+      #lp-editor button {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      #lp-ok {
+        background: #e94560;
+        color: #fff;
+      }
+      #lp-cancel {
+        background: #334;
+        color: #eee;
+      }
+
+      /* カード詳細パネル */
+      #card-detail {
+        width: 260px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid #223;
+        border-radius: 8px;
+        padding: 8px;
+        overflow-y: auto;
+      }
+      #card-detail img {
+        width: 100%;
+        border-radius: 4px;
+        object-fit: cover;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+      }
+      #card-detail-name {
+        font-size: 0.8rem;
+        color: #f0c040;
+        font-weight: bold;
+        line-height: 1.3;
+      }
+      #card-detail-info {
+        font-size: 0.7rem;
+        color: #aaa;
+        line-height: 1.5;
+      }
+      #card-detail-text {
+        font-size: 0.7rem;
+        color: #ccc;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        border-top: 1px solid #334;
+        padding-top: 6px;
+      }
+      #card-detail-empty {
+        font-size: 0.75rem;
+        color: #445;
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      /* Token counter badge */
+      .token-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: #e94560;
+        color: #fff;
+        font-size: 0.6rem;
+        border-radius: 4px;
+        padding: 1px 4px;
+        pointer-events: none;
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Setup Screen -->
+    <div id="setup-screen">
+      <h1>🃏 デュエルシミュレーター</h1>
+
+      <div
+        style="display: flex; flex-direction: column; gap: 8px; width: 400px"
+      >
+        <p style="color: #f0c040; font-size: 0.9rem">
+          ① 公式DBのデッキURLから読み込む
+        </p>
+        <div style="display: flex; gap: 8px">
+          <input
+            id="deck-url-input"
+            type="text"
+            placeholder="https://www.db.yugioh-card.com/yugiohdb/member_deck.action?..."
+            style="
+              flex: 1;
+              padding: 10px;
+              background: #1a2a3a;
+              border: 1px solid #334;
+              border-radius: 8px;
+              color: #eee;
+              font-size: 0.85rem;
+            "
+          />
+          <button
+            id="url-btn"
+            onclick="loadFromUrl()"
+            style="
+              padding: 10px 16px;
+              background: #2a6040;
+              border: none;
+              border-radius: 8px;
+              color: #fff;
+              cursor: pointer;
+              white-space: nowrap;
+            "
+          >
+            URLから読み込む
+          </button>
+        </div>
+
+        <p style="color: #aaa; font-size: 0.8rem; text-align: center">
+          ── または ──
+        </p>
+
+        <p style="color: #f0c040; font-size: 0.9rem">
+          ② カードIDを1行1枚で入力（最大60枚）
+        </p>
+        <textarea
+          id="deck-input"
+          placeholder="23160&#10;46986414&#10;89631139&#10;..."
+          style="height: 140px"
+        ></textarea>
+        <button id="start-btn">デッキ読み込み開始</button>
+      </div>
+
+      <div id="setup-error"></div>
+      <div id="loading-msg"></div>
+      <p><a href="/" style="color: #88aacc">← カード検索に戻る</a></p>
+    </div>
+
+    <!-- Duel Screen -->
+    <div id="duel-screen">
+      <div id="topbar">
+        <h2>🃏 デュエルシミュレーター</h2>
+        <span id="lp-display">LP: <span id="lp-val">8000</span></span>
+        <button class="topbar-btn" onclick="editLP()">LP変更</button>
+        <button class="topbar-btn" onclick="drawCard()">ドロー</button>
+        <button class="topbar-btn" onclick="shuffleDeck()">シャッフル</button>
+        <button class="topbar-btn" onclick="resetField()">リセット</button>
+        <button class="topbar-btn" onclick="location.reload()">
+          デッキ変更
+        </button>
+      </div>
+
+      <div id="duel-body">
+        <!-- 左: フィールド＋下部エリア -->
+        <div id="field">
+          <div id="field-area">
+            <div class="field-zones">
+              <!-- EXモンスターゾーン: 左にフィールドゾーンを隔隔で配置 -->
+              <div class="zone-row" id="my-ex-mon-row">
+                <div
+                  class="side-zone"
+                  id="field-zone-btn"
+                  title="フィールド魔法"
+                  data-zone="field-magic"
+                  style="margin-right: 8px;"
+                >
+                  <span class="zone-label">フィールド</span>
+                </div>
+                <div class="zone" data-zone="ex-mon-0">
+                  <span class="zone-label">EX</span>
+                </div>
+                <div class="zone" data-zone="ex-mon-1">
+                  <span class="zone-label">EX</span>
+                </div>
+              </div>
+              <!-- メインモンスターゾーン 5つ -->
+              <div class="zone-row" id="my-mon-row">
+                <div class="zone" data-zone="mon-0">
+                  <span class="zone-label">モンスター</span>
+                </div>
+                <div class="zone" data-zone="mon-1">
+                  <span class="zone-label">モンスター</span>
+                </div>
+                <div class="zone" data-zone="mon-2">
+                  <span class="zone-label">モンスター</span>
+                </div>
+                <div class="zone" data-zone="mon-3">
+                  <span class="zone-label">モンスター</span>
+                </div>
+                <div class="zone" data-zone="mon-4">
+                  <span class="zone-label">モンスター</span>
+                </div>
+              </div>
+              <!-- 魔法罠ゾーン 5つ -->
+              <div class="zone-row" id="my-st-row">
+                <div class="zone" data-zone="st-0">
+                  <span class="zone-label">魔/罠</span>
+                </div>
+                <div class="zone" data-zone="st-1">
+                  <span class="zone-label">魔/罠</span>
+                </div>
+                <div class="zone" data-zone="st-2">
+                  <span class="zone-label">魔/罠</span>
+                </div>
+                <div class="zone" data-zone="st-3">
+                  <span class="zone-label">魔/罠</span>
+                </div>
+                <div class="zone" data-zone="st-4">
+                  <span class="zone-label">魔/罠</span>
+                </div>
+              </div>
+            </div>
+            <!-- 右サイド: 墓地・除外 縦配置 -->
+            <div id="right-side-col">
+              <div class="pile-section vertical">
+                <div class="pile-title">墓地 <span id="grave-count">0</span></div>
+                <div class="pile-grid vertical-scroll" id="grave-pile"></div>
+              </div>
+              <div class="pile-section vertical">
+                <div class="pile-title">除外 <span id="removed-count">0</span></div>
+                <div class="pile-grid vertical-scroll" id="removed-pile"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 下部: 手札+EX行、デッキ行 -->
+          <div id="bottom-area">
+            <div id="hand-ex-row">
+              <div id="hand-section">
+                <div class="bottom-label">
+                  手札 (<span id="hand-count">0</span>)
+                </div>
+                <div id="hand-area" data-zone="hand"></div>
+              </div>
+              <div class="pile-section" id="extra-section">
+                <div class="pile-title">EX <span id="extra-count">0</span></div>
+                <div class="pile-grid" id="extra-pile"></div>
+              </div>
+            </div>
+            <div class="pile-section" id="deck-section">
+              <div class="pile-title">デッキ <span id="deck-count">0</span></div>
+              <div class="pile-grid" id="deck-pile"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中央: カード詳細パネル -->
+        <div id="card-detail">
+          <div id="card-detail-empty">カードをクリック</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="ctx-menu">
+      <div onclick="ctxAction('to-hand')">手札に戻す</div>
+      <div onclick="ctxAction('to-grave')">墓地へ送る</div>
+      <div onclick="ctxAction('to-deck-top')">デッキトップへ</div>
+      <div onclick="ctxAction('to-deck-bottom')">デッキボトムへ</div>
+      <div class="sep"></div>
+      <div onclick="ctxAction('toggle-face')">表/裏 切り替え</div>
+      <div onclick="ctxAction('toggle-def')">攻撃/守備 切り替え</div>
+      <div class="sep"></div>
+      <div onclick="ctxAction('to-field')">フィールドへ出す</div>
+      <div onclick="ctxAction('remove')">除外</div>
+    </div>
+
+    <!-- LP Editor -->
+    <div id="lp-editor">
+      <h3>LP変更</h3>
+      <input id="lp-input" type="number" value="8000" />
+      <div class="lp-btns">
+        <button id="lp-ok" onclick="applyLP()">適用</button>
+        <button
+          id="lp-cancel"
+          onclick="document.getElementById('lp-editor').style.display = 'none'"
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // ===== State =====
+      let deck = []; // {cid, name, imageUrl, ...}
+      let hand = [];
+      let graveyard = [];
+      let removed = [];
+      let extraDeck = [];
+      let lp = 8000;
+
+      // zone -> card (only one card per zone for field zones)
+      // zone key: 'mon-0'..'mon-4', 'st-0'..'st-4', 'opp-mon-0..4', 'opp-st-0..4', 'field-magic'
+      const fieldCards = {}; // zoneKey -> {card, facedown, defense}
+
+      let ctxTarget = null;
+      let graveCtxIdx = -1;
+
+      function showCtxMenu(e) {
+        const menu = document.getElementById("ctx-menu");
+        menu.style.display = "block";
+        menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + "px";
+        menu.style.top = Math.min(e.clientY, window.innerHeight - 260) + "px";
+      }
+
+      // ===== Setup =====
+      async function fetchCardData(cids) {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cids }),
+        });
+        if (!res.ok) throw new Error("カードデータの取得に失敗しました");
+        return res.json();
+      }
+
+      function buildDeck(cards) {
+        return cards.map((c, i) => ({
+          ...c,
+          uid: `${c.cid}-${i}-${Math.random().toString(36).slice(2)}`,
+        }));
+      }
+
+      async function loadFromUrl() {
+        const url = document.getElementById("deck-url-input").value.trim();
+        if (!url) {
+          showError("URLを入力してください");
+          return;
+        }
+        setLoading("デッキURLを解析中...");
+        document.getElementById("url-btn").disabled = true;
+
+        try {
+          const r = await fetch(
+            "/api/deck-from-url?url=" + encodeURIComponent(url),
+          );
+          const data = await r.json();
+          if (data.error) throw new Error(data.error);
+
+          setLoading(
+            `メイン${data.cids.length}枚 / EX${data.extraCids.length}枚のカードデータを取得中...`,
+          );
+          const [mainCards, extraCards] = await Promise.all([
+            fetchCardData(data.cids),
+            fetchCardData(data.extraCids),
+          ]);
+
+          deck = buildDeck(mainCards);
+          extraDeck = buildDeck(extraCards);
+
+          if (!deck.length)
+            throw new Error("メインデッキのカードが取得できませんでした");
+          setLoading(
+            `メイン${deck.length}枚 / EX${extraDeck.length}枚 読み込み完了`,
+          );
+          shuffleDeck();
+          startDuel();
+        } catch (e) {
+          showError(e.message);
+          document.getElementById("url-btn").disabled = false;
+        }
+      }
+
+      document
+        .getElementById("start-btn")
+        .addEventListener("click", async () => {
+          const raw = document.getElementById("deck-input").value.trim();
+          const cids = raw
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => /^\d+$/.test(s))
+            .slice(0, 60);
+          if (!cids.length) {
+            showError("カードIDを入力してください");
+            return;
+          }
+
+          setLoading(`${cids.length}枚のカードを読み込み中...`);
+          document.getElementById("start-btn").disabled = true;
+
+          try {
+            const cards = await fetchCardData(cids);
+            deck = buildDeck(cards);
+            if (!deck.length)
+              throw new Error("有効なカードが見つかりませんでした");
+            setLoading(`メイン${deck.length}枚 読み込み完了`);
+            shuffleDeck();
+            startDuel();
+          } catch (e) {
+            showError(e.message);
+            document.getElementById("start-btn").disabled = false;
+          }
+        });
+
+      function showError(msg) {
+        document.getElementById("setup-error").textContent = msg;
+        document.getElementById("loading-msg").textContent = "";
+      }
+      function setLoading(msg) {
+        document.getElementById("setup-error").textContent = "";
+        document.getElementById("loading-msg").textContent = msg;
+      }
+
+      function startDuel() {
+        document.getElementById("setup-screen").style.display = "none";
+        document.getElementById("duel-screen").style.display = "flex";
+        setupDropTargets();
+        updateCounts();
+        for (let i = 0; i < 5; i++) drawCard(true);
+      }
+
+      // ===== Deck ops =====
+      function shuffleDeck() {
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        updateCounts();
+      }
+
+      function drawCard(silent = false) {
+        if (!deck.length) {
+          if (!silent) alert("デッキが空です");
+          return;
+        }
+        const card = deck.shift();
+        hand.push(card);
+        renderHand();
+        updateCounts();
+      }
+
+      function resetField() {
+        if (!confirm("フィールドをリセットしますか？")) return;
+        // Return all field cards to deck
+        Object.keys(fieldCards).forEach((zone) => {
+          if (fieldCards[zone]) {
+            deck.push(fieldCards[zone].card);
+            delete fieldCards[zone];
+          }
+        });
+        // Return hand to deck
+        deck.push(...hand);
+        hand = [];
+        graveyard = [];
+        removed = [];
+        lp = 8000;
+        document.getElementById("lp-val").textContent = lp;
+        shuffleDeck();
+        renderHand();
+        renderAllZones();
+        updateCounts();
+      }
+
+      // ===== Render =====
+      function renderHand() {
+        const area = document.getElementById("hand-area");
+        area.innerHTML = "";
+        hand.forEach((card) => {
+          const img = makeCardImg(card, false, false);
+          img.dataset.uid = card.uid;
+          img.dataset.zone = "hand";
+          area.appendChild(img);
+        });
+        document.getElementById("hand-count").textContent = hand.length;
+      }
+
+      function renderAllZones() {
+        document
+          .querySelectorAll(".zone[data-zone], .side-zone[data-zone]")
+          .forEach((zoneEl) => {
+            const key = zoneEl.dataset.zone;
+            // Remove existing card imgs (keep label)
+            zoneEl.querySelectorAll(".card-img").forEach((el) => el.remove());
+            if (fieldCards[key]) {
+              const { card, facedown, defense } = fieldCards[key];
+              const img = makeCardImg(card, facedown, defense);
+              img.dataset.uid = card.uid;
+              img.dataset.zone = key;
+              zoneEl.appendChild(img);
+            }
+          });
+      }
+
+      function renderZone(key) {
+        const zoneEl = document.querySelector(`[data-zone="${key}"]`);
+        if (!zoneEl) return;
+        zoneEl.querySelectorAll(".card-img").forEach((el) => el.remove());
+        if (fieldCards[key]) {
+          const { card, facedown, defense } = fieldCards[key];
+          const img = makeCardImg(card, facedown, defense);
+          img.dataset.uid = card.uid;
+          img.dataset.zone = key;
+          zoneEl.appendChild(img);
+        }
+      }
+
+      function makeCardImg(card, facedown, defense) {
+        const img = document.createElement("img");
+        img.src = card.imageUrl || "";
+        img.alt = card.name;
+        img.className =
+          "card-img" +
+          (defense ? " defense" : "") +
+          (facedown ? " facedown" : "");
+        img.draggable = true;
+        img.title = card.name;
+
+        img.addEventListener("dragstart", onDragStart);
+        img.addEventListener("contextmenu", onContextMenu);
+        img.addEventListener("click", () => showCardDetail(card));
+        return img;
+      }
+
+      function updateCounts() {
+        renderPiles();
+      }
+
+      function renderPiles() {
+        // デッキ
+        const deckPile = document.getElementById("deck-pile");
+        deckPile.innerHTML = "";
+        document.getElementById("deck-count").textContent = deck.length;
+        deck.forEach((card) => {
+          const img = makePileImg(card, "deck");
+          img.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            ctxTarget = { uid: card.uid, zone: "deck" };
+            showCtxMenu(e);
+          });
+          deckPile.appendChild(img);
+        });
+
+        // 墓地
+        const gravePile = document.getElementById("grave-pile");
+        gravePile.innerHTML = "";
+        document.getElementById("grave-count").textContent = graveyard.length;
+        graveyard.forEach((card, i) => {
+          const img = makePileImg(card, "grave");
+          img.dataset.idx = i;
+          img.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            ctxTarget = { uid: card.uid, zone: "grave" };
+            graveCtxIdx = i;
+            showCtxMenu(e);
+          });
+          gravePile.appendChild(img);
+        });
+
+        // 除外
+        const removedPile = document.getElementById("removed-pile");
+        removedPile.innerHTML = "";
+        document.getElementById("removed-count").textContent = removed.length;
+        removed.forEach((card, i) => {
+          const img = makePileImg(card, "removed");
+          img.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            ctxTarget = { uid: card.uid, zone: "removed" };
+            showCtxMenu(e);
+          });
+          removedPile.appendChild(img);
+        });
+
+        // EXデッキ
+        const extraPile = document.getElementById("extra-pile");
+        extraPile.innerHTML = "";
+        document.getElementById("extra-count").textContent = extraDeck.length;
+        extraDeck.forEach((card) => {
+          const img = makePileImg(card, "extra");
+          img.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            ctxTarget = { uid: card.uid, zone: "extra" };
+            showCtxMenu(e);
+          });
+          extraPile.appendChild(img);
+        });
+      }
+
+      function makePileImg(card, zone) {
+        const img = document.createElement("img");
+        img.src = card.imageUrl || "";
+        img.alt = card.name;
+        img.title = card.name;
+        img.draggable = true;
+        img.dataset.uid = card.uid;
+        img.dataset.zone = zone;
+        img.addEventListener("dragstart", onDragStart);
+        img.addEventListener("click", () => showCardDetail(card));
+        return img;
+      }
+
+      // ===== Drag & Drop =====
+      let dragData = null;
+
+      function onDragStart(e) {
+        const el = e.target;
+        dragData = {
+          uid: el.dataset.uid,
+          zone: el.dataset.zone,
+          idx: el.dataset.idx !== undefined ? parseInt(el.dataset.idx) : -1,
+        };
+        e.dataTransfer.effectAllowed = "move";
+      }
+
+      // ドロップ先を登録（フィールドゾーン・手札・pile-grid）
+      function setupDropTargets() {
+        document
+          .querySelectorAll(".zone[data-zone], .side-zone[data-zone]")
+          .forEach((el) => {
+            el.addEventListener("dragover", (e) => {
+              e.preventDefault();
+              el.classList.add("drag-over");
+            });
+            el.addEventListener("dragleave", () =>
+              el.classList.remove("drag-over"),
+            );
+            el.addEventListener("drop", (e) => {
+              e.preventDefault();
+              el.classList.remove("drag-over");
+              if (dragData) {
+                moveCard(dragData, el.dataset.zone);
+                dragData = null;
+              }
+            });
+          });
+
+        document
+          .getElementById("hand-area")
+          .addEventListener("dragover", (e) => e.preventDefault());
+        document.getElementById("hand-area").addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (dragData) {
+            moveCard(dragData, "hand");
+            dragData = null;
+          }
+        });
+
+        ["deck-pile", "grave-pile", "removed-pile", "extra-pile"].forEach(
+          (id) => {
+            const el = document.getElementById(id);
+            const toZone = {
+              "deck-pile": "deck",
+              "grave-pile": "grave",
+              "removed-pile": "removed",
+              "extra-pile": "extra",
+            }[id];
+            el.addEventListener("dragover", (e) => {
+              e.preventDefault();
+              el.classList.add("drag-over");
+            });
+            el.addEventListener("dragleave", () =>
+              el.classList.remove("drag-over"),
+            );
+            el.addEventListener("drop", (e) => {
+              e.preventDefault();
+              el.classList.remove("drag-over");
+              if (dragData) {
+                moveCard(dragData, toZone);
+                dragData = null;
+              }
+            });
+          },
+        );
+      }
+
+      function moveCard(from, toZone) {
+        if (from.zone === toZone) return;
+
+        // --- 取り出し ---
+        let card = null;
+        let facedown = false,
+          defense = false;
+
+        if (from.zone === "hand") {
+          const idx = hand.findIndex((c) => c.uid === from.uid);
+          if (idx === -1) return;
+          card = hand.splice(idx, 1)[0];
+        } else if (from.zone === "deck") {
+          const idx = deck.findIndex((c) => c.uid === from.uid);
+          if (idx === -1) return;
+          card = deck.splice(idx, 1)[0];
+        } else if (from.zone === "grave") {
+          const idx = graveyard.findIndex((c) => c.uid === from.uid);
+          if (idx === -1) return;
+          card = graveyard.splice(idx, 1)[0];
+        } else if (from.zone === "removed") {
+          const idx = removed.findIndex((c) => c.uid === from.uid);
+          if (idx === -1) return;
+          card = removed.splice(idx, 1)[0];
+        } else if (from.zone === "extra") {
+          const idx = extraDeck.findIndex((c) => c.uid === from.uid);
+          if (idx === -1) return;
+          card = extraDeck.splice(idx, 1)[0];
+        } else if (
+          fieldCards[from.zone] &&
+          fieldCards[from.zone].card.uid === from.uid
+        ) {
+          ({ card, facedown, defense } = fieldCards[from.zone]);
+          delete fieldCards[from.zone];
+          renderZone(from.zone);
+        } else return;
+
+        // --- 置き先 ---
+        if (toZone === "hand") {
+          hand.push(card);
+          renderHand();
+        } else if (toZone === "deck") {
+          deck.push(card);
+        } else if (toZone === "grave") {
+          graveyard.push(card);
+        } else if (toZone === "removed") {
+          removed.push(card);
+        } else if (toZone === "extra") {
+          extraDeck.push(card);
+        } else {
+          // フィールドゾーン: 既存カードは手札へ
+          if (fieldCards[toZone]) {
+            hand.push(fieldCards[toZone].card);
+            renderHand();
+          }
+          fieldCards[toZone] = { card, facedown, defense };
+          renderZone(toZone);
+        }
+
+        if (from.zone === "hand" || toZone === "hand") renderHand();
+        renderPiles();
+      }
+
+      // ===== Context Menu =====
+      function onContextMenu(e) {
+        e.preventDefault();
+        ctxTarget = { uid: e.target.dataset.uid, zone: e.target.dataset.zone };
+        showCtxMenu(e);
+      }
+
+      document.addEventListener("click", () => {
+        document.getElementById("ctx-menu").style.display = "none";
+      });
+
+      function ctxAction(action) {
+        document.getElementById("ctx-menu").style.display = "none";
+        if (!ctxTarget) return;
+        const { uid, zone } = ctxTarget;
+
+        if (action === "toggle-face") {
+          if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
+            fieldCards[zone].facedown = !fieldCards[zone].facedown;
+            renderZone(zone);
+          }
+          return;
+        }
+        if (action === "toggle-def") {
+          if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
+            fieldCards[zone].defense = !fieldCards[zone].defense;
+            renderZone(zone);
+          }
+          return;
+        }
+
+        // 現在場所から取り出す
+        let card = null;
+        if (zone === "hand") {
+          const idx = hand.findIndex((c) => c.uid === uid);
+          if (idx === -1) return;
+          card = hand.splice(idx, 1)[0];
+          renderHand();
+        } else if (zone === "deck") {
+          const idx = deck.findIndex((c) => c.uid === uid);
+          if (idx === -1) return;
+          card = deck.splice(idx, 1)[0];
+        } else if (zone === "grave") {
+          const idx = graveyard.findIndex((c) => c.uid === uid);
+          if (idx === -1) return;
+          card = graveyard.splice(idx, 1)[0];
+        } else if (zone === "removed") {
+          const idx = removed.findIndex((c) => c.uid === uid);
+          if (idx === -1) return;
+          card = removed.splice(idx, 1)[0];
+        } else if (zone === "extra") {
+          const idx = extraDeck.findIndex((c) => c.uid === uid);
+          if (idx === -1) return;
+          card = extraDeck.splice(idx, 1)[0];
+        } else if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
+          card = fieldCards[zone].card;
+          delete fieldCards[zone];
+          renderZone(zone);
+        }
+        if (!card) return;
+
+        if (action === "to-hand") {
+          hand.push(card);
+          renderHand();
+        } else if (action === "to-grave") {
+          graveyard.push(card);
+        } else if (action === "to-deck-top") {
+          deck.unshift(card);
+        } else if (action === "to-deck-bottom") {
+          deck.push(card);
+        } else if (action === "remove") {
+          removed.push(card);
+        } else if (action === "to-field") {
+          const zones = ["mon-0", "mon-1", "mon-2", "mon-3", "mon-4"];
+          const empty = zones.find((z) => !fieldCards[z]);
+          if (empty) {
+            fieldCards[empty] = { card, facedown: false, defense: false };
+            renderZone(empty);
+          } else {
+            hand.push(card);
+            renderHand();
+            alert("モンスターゾーンが満杯です");
+          }
+        }
+        renderPiles();
+      }
+
+      // ===== Card Detail =====
+      function showCardDetail(card) {
+        const panel = document.getElementById("card-detail");
+        const info = [
+          card.attribute ? `属性: ${card.attribute}` : "",
+          card.level ? `レベル: ${card.level}` : "",
+          card.race ? `種族: ${card.race}` : "",
+          card.atk !== undefined && card.atk !== ""
+            ? `ATK: ${card.atk} / DEF: ${card.def}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        panel.innerHTML = `
+    <img src="${card.imageUrl}" alt="${card.name}">
+    <div id="card-detail-name">${card.name}</div>
+    ${info ? `<div id="card-detail-info">${info.replace(/\n/g, "<br>")}</div>` : ""}
+    ${card.text ? `<div id="card-detail-text">${card.text}</div>` : ""}
+  `;
+      }
+
+      // ===== LP =====
+      function editLP() {
+        document.getElementById("lp-input").value = lp;
+        document.getElementById("lp-editor").style.display = "block";
+      }
+      function applyLP() {
+        lp = parseInt(document.getElementById("lp-input").value) || 0;
+        document.getElementById("lp-val").textContent = lp;
+        document.getElementById("lp-editor").style.display = "none";
+      }
+    </script>
+  </body>
+</html>
