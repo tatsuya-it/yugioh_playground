@@ -129,7 +129,7 @@
       #field-area {
         flex: 1;
         display: grid;
-        grid-template-columns: 1fr 200px;
+        grid-template-columns: 1fr 242px;
         gap: 4px;
         min-height: 0;
       }
@@ -147,8 +147,8 @@
         align-items: center;
       }
       .zone {
-        width: 72px;
-        height: 100px;
+        width: 88px;
+        height: 124px;
         border: 1px dashed #334;
         border-radius: 6px;
         background: rgba(255, 255, 255, 0.03);
@@ -182,8 +182,8 @@
         justify-content: center;
       }
       .side-zone {
-        width: 60px;
-        height: 84px;
+        width: 88px;
+        height: 124px;
         border: 1px dashed #334;
         border-radius: 6px;
         background: rgba(255, 255, 255, 0.03);
@@ -259,7 +259,7 @@
       /* 墓地・除外: フィールド右側縦配置 */
       .pile-section.vertical {
         flex: 1;
-        min-width: 0;
+        min-width: 119px;
         min-height: 0;
       }
       .pile-title {
@@ -286,9 +286,23 @@
         align-items: flex-start;
         align-content: flex-start;
       }
+      /* 墓地・除外: 2列固定 */
+      #grave-pile.vertical-scroll,
+      #removed-pile.vertical-scroll {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+        align-items: start;
+      }
+      #grave-pile.vertical-scroll img,
+      #removed-pile.vertical-scroll img {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 54 / 76;
+      }
       .pile-grid img {
-        width: 44px;
-        height: 62px;
+        width: 54px;
+        height: 76px;
         border-radius: 3px;
         object-fit: cover;
         cursor: grab;
@@ -315,15 +329,15 @@
         display: flex;
         flex-direction: row;
         gap: 4px;
-        width: 200px;
+        width: 242px;
         flex-shrink: 0;
         min-height: 0;
       }
 
       /* Cards (フィールド・手札) */
       .card-img {
-        width: 72px;
-        height: 100px;
+        width: 88px;
+        height: 124px;
         border-radius: 4px;
         object-fit: cover;
         cursor: grab;
@@ -354,8 +368,8 @@
       }
       #hand-area .card-img {
         position: relative;
-        width: 44px;
-        height: 62px;
+        width: 54px;
+        height: 76px;
         flex-shrink: 0;
       }
       #hand-area .card-img.defense {
@@ -456,7 +470,8 @@
         overflow-y: auto;
       }
       #card-detail img {
-        width: 100%;
+        width: 75%;
+        align-self: center;
         border-radius: 4px;
         object-fit: cover;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -473,12 +488,14 @@
         line-height: 1.5;
       }
       #card-detail-text {
-        font-size: 0.7rem;
+        font-size: 0.8rem;
         color: #ccc;
         line-height: 1.6;
         white-space: pre-wrap;
         border-top: 1px solid #334;
         padding-top: 6px;
+        flex: 1;
+        overflow-y: auto;
       }
       #card-detail-empty {
         font-size: 0.75rem;
@@ -944,12 +961,28 @@
         renderPiles();
       }
 
+      const TYPE_ORDER = { monster: 0, spell: 1, trap: 2 };
+      function cardTypeOrder(card) {
+        const t = (card.type || "").toLowerCase();
+        if (t.includes("monster")) return 0;
+        if (t.includes("spell")) return 1;
+        if (t.includes("trap")) return 2;
+        return 3;
+      }
+      function sortByTypeAndName(arr) {
+        return [...arr].sort((a, b) => {
+          const td = cardTypeOrder(a) - cardTypeOrder(b);
+          if (td !== 0) return td;
+          return (a.name || "").localeCompare(b.name || "", "ja");
+        });
+      }
+
       function renderPiles() {
-        // デッキ
+        // デッキ（モンスター→魔法→罠、各50音順）
         const deckPile = document.getElementById("deck-pile");
         deckPile.innerHTML = "";
         document.getElementById("deck-count").textContent = deck.length;
-        deck.forEach((card) => {
+        sortByTypeAndName(deck).forEach((card) => {
           const img = makePileImg(card, "deck");
           img.addEventListener("contextmenu", (e) => {
             e.preventDefault();
@@ -989,11 +1022,11 @@
           removedPile.appendChild(img);
         });
 
-        // EXデッキ
+        // EXデッキ（50音順）
         const extraPile = document.getElementById("extra-pile");
         extraPile.innerHTML = "";
         document.getElementById("extra-count").textContent = extraDeck.length;
-        extraDeck.forEach((card) => {
+        [...extraDeck].sort((a, b) => (a.name || "").localeCompare(b.name || "", "ja")).forEach((card) => {
           const img = makePileImg(card, "extra");
           img.addEventListener("contextmenu", (e) => {
             e.preventDefault();
