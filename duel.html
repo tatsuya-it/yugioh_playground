@@ -571,6 +571,19 @@
         pointer-events: none;
         z-index: 5;
       }
+      .stack-badge {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        background: rgba(0,0,0,0.75);
+        color: #f0c040;
+        font-size: 0.65rem;
+        font-weight: bold;
+        border-radius: 4px;
+        padding: 1px 5px;
+        pointer-events: none;
+        z-index: 20;
+      }
     </style>
   </head>
   <body>
@@ -958,14 +971,12 @@
 
       function resetField() {
         if (!confirm("フィールドをリセットしますか？")) return;
-        // Return all field cards to deck
         Object.keys(fieldCards).forEach((zone) => {
           if (fieldCards[zone]) {
-            deck.push(fieldCards[zone].card);
+            fieldCards[zone].stack.forEach(e => deck.push(e.card));
             delete fieldCards[zone];
           }
         });
-        // Return hand to deck
         deck.push(...hand);
         hand = [];
         graveyard = [];
@@ -1002,28 +1013,41 @@
           .querySelectorAll(".zone[data-zone], .side-zone[data-zone]")
           .forEach((zoneEl) => {
             const key = zoneEl.dataset.zone;
-            // Remove existing card imgs (keep label)
-            zoneEl.querySelectorAll(".card-img").forEach((el) => el.remove());
-            if (fieldCards[key]) {
-              const { card, facedown, defense } = fieldCards[key];
-              const img = makeCardImg(card, facedown, defense);
-              img.dataset.uid = card.uid;
-              img.dataset.zone = key;
-              zoneEl.appendChild(img);
-            }
+            zoneEl.querySelectorAll(".card-img, .stack-badge").forEach((el) => el.remove());
+            if (fieldCards[key]) renderStackInZone(zoneEl, key);
           });
       }
 
       function renderZone(key) {
         const zoneEl = document.querySelector(`[data-zone="${key}"]`);
         if (!zoneEl) return;
-        zoneEl.querySelectorAll(".card-img").forEach((el) => el.remove());
-        if (fieldCards[key]) {
-          const { card, facedown, defense } = fieldCards[key];
-          const img = makeCardImg(card, facedown, defense);
-          img.dataset.uid = card.uid;
+        zoneEl.querySelectorAll(".card-img, .stack-badge").forEach((el) => el.remove());
+        if (fieldCards[key]) renderStackInZone(zoneEl, key);
+      }
+
+      function renderStackInZone(zoneEl, key) {
+        const stack = fieldCards[key].stack;
+        const OFFSET = 14;
+        const last = stack.length - 1;
+        stack.forEach((entry, i) => {
+          const isTop = i === last;
+          const offset = (last - i) * OFFSET;
+          // 下に重ねられたカードは表の縦で固定、一番上のカードは元の表示形式を維持
+          const fd = isTop ? entry.facedown : false;
+          const df = isTop ? entry.defense  : false;
+          const img = makeCardImg(entry.card, fd, df);
+          img.dataset.uid = entry.card.uid;
           img.dataset.zone = key;
+          img.style.top    = offset + "px";
+          img.style.left   = offset + "px";
+          img.style.zIndex = i + 1;
           zoneEl.appendChild(img);
+        });
+        if (stack.length > 1) {
+          const badge = document.createElement("div");
+          badge.className = "stack-badge";
+          badge.textContent = stack.length - 1;
+          zoneEl.appendChild(badge);
         }
       }
 
@@ -1235,10 +1259,14 @@
           card = extraDeck.splice(idx, 1)[0];
         } else if (
           fieldCards[from.zone] &&
-          fieldCards[from.zone].card.uid === from.uid
+          fieldCards[from.zone].stack.some(e => e.card.uid === from.uid)
         ) {
-          ({ card, facedown, defense } = fieldCards[from.zone]);
-          delete fieldCards[from.zone];
+          const stack = fieldCards[from.zone].stack;
+          const idx = stack.findIndex(e => e.card.uid === from.uid);
+          ({ card, facedown, defense } = stack[idx]);
+          stack.splice(idx, 1);
+          if (stack.length === 0) delete fieldCards[from.zone];
+          else if (stack.length === 1) { stack[0].facedown = false; stack[0].defense = false; }
           renderZone(from.zone);
         } else return;
 
@@ -1262,11 +1290,10 @@
             showPlacePopup(card, toZone, isMonster, from);
             return;
           }
-          if (fieldCards[toZone]) {
-            hand.push(fieldCards[toZone].card);
-            renderHand();
-          }
-          fieldCards[toZone] = { card, facedown, defense };
+          if (!fieldCards[toZone]) fieldCards[toZone] = { stack: [] };
+          // 既存スタックの全カードを表の縦に正規化
+          fieldCards[toZone].stack.forEach(e => { e.facedown = false; e.defense = false; });
+          fieldCards[toZone].stack.push({ card, facedown, defense });
           renderZone(toZone);
         }
 
@@ -1291,16 +1318,16 @@
         const { uid, zone } = ctxTarget;
 
         if (action === "toggle-face") {
-          if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
-            fieldCards[zone].facedown = !fieldCards[zone].facedown;
-            renderZone(zone);
+          if (fieldCards[zone]) {
+            const entry = fieldCards[zone].stack.find(e => e.card.uid === uid);
+            if (entry) { entry.facedown = !entry.facedown; renderZone(zone); }
           }
           return;
         }
         if (action === "toggle-def") {
-          if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
-            fieldCards[zone].defense = !fieldCards[zone].defense;
-            renderZone(zone);
+          if (fieldCards[zone]) {
+            const entry = fieldCards[zone].stack.find(e => e.card.uid === uid);
+            if (entry) { entry.defense = !entry.defense; renderZone(zone); }
           }
           return;
         }
@@ -1328,10 +1355,16 @@
           const idx = extraDeck.findIndex((c) => c.uid === uid);
           if (idx === -1) return;
           card = extraDeck.splice(idx, 1)[0];
-        } else if (fieldCards[zone] && fieldCards[zone].card.uid === uid) {
-          card = fieldCards[zone].card;
-          delete fieldCards[zone];
-          renderZone(zone);
+        } else if (fieldCards[zone]) {
+          const stack = fieldCards[zone].stack;
+          const idx = stack.findIndex(e => e.card.uid === uid);
+          if (idx !== -1) {
+            card = stack[idx].card;
+            stack.splice(idx, 1);
+            if (stack.length === 0) delete fieldCards[zone];
+            else if (stack.length === 1) { stack[0].facedown = false; stack[0].defense = false; }
+            renderZone(zone);
+          }
         }
         if (!card) return;
 
@@ -1350,7 +1383,7 @@
           const zones = ["mon-0", "mon-1", "mon-2", "mon-3", "mon-4"];
           const empty = zones.find((z) => !fieldCards[z]);
           if (empty) {
-            fieldCards[empty] = { card, facedown: false, defense: false };
+            fieldCards[empty] = { stack: [{ card, facedown: false, defense: false }] };
             renderZone(empty);
           } else {
             hand.push(card);
@@ -1418,14 +1451,14 @@
       function confirmPlace(facedown, defense) {
         document.getElementById("place-popup").style.display = "none";
         if (!pendingPlace) return;
-        const { card, toZone } = pendingPlace;
+        const { card, toZone, from } = pendingPlace;
         pendingPlace = null;
-        if (fieldCards[toZone]) {
-          hand.push(fieldCards[toZone].card);
-          renderHand();
-        }
-        fieldCards[toZone] = { card, facedown, defense };
+        if (!fieldCards[toZone]) fieldCards[toZone] = { stack: [] };
+        // 既存スタックの全カードを表の縦に正規化
+        fieldCards[toZone].stack.forEach(e => { e.facedown = false; e.defense = false; });
+        fieldCards[toZone].stack.push({ card, facedown, defense });
         renderZone(toZone);
+        if (from.zone === "hand") renderHand();
         renderPiles();
       }
 
