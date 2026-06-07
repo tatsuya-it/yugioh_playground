@@ -4,677 +4,349 @@
     <meta charset="UTF-8" />
     <title>デュエルシミュレーター</title>
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        background: #0d1b2a;
-        color: #eee;
-        font-family: sans-serif;
-        height: 100vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
+        background: #0d1b2a; color: #eee; font-family: sans-serif;
+        height: 100vh; overflow: hidden; display: flex; flex-direction: column;
       }
 
       /* ---- Setup Screen ---- */
       #setup-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        gap: 16px;
-        padding: 24px;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; height: 100vh; gap: 16px; padding: 24px;
       }
-      #setup-screen h1 {
-        font-size: 1.6rem;
-        color: #f0c040;
-      }
-      #setup-screen textarea {
-        width: 360px;
-        height: 200px;
-        background: #1a2a3a;
-        color: #eee;
-        border: 1px solid #334;
-        border-radius: 8px;
-        padding: 12px;
-        font-size: 0.95rem;
-        resize: vertical;
-      }
-      #setup-screen p {
-        font-size: 0.85rem;
-        color: #aaa;
-      }
+      #setup-screen h1 { font-size: 1.6rem; color: #f0c040; }
+      #setup-screen p { font-size: 0.85rem; color: #aaa; }
       #start-btn {
-        padding: 12px 32px;
-        background: #e94560;
-        border: none;
-        border-radius: 8px;
-        color: #fff;
-        font-size: 1rem;
-        cursor: pointer;
+        padding: 12px 32px; background: #e94560; border: none;
+        border-radius: 8px; color: #fff; font-size: 1rem; cursor: pointer;
       }
-      #start-btn:hover {
-        background: #c73652;
-      }
-      #setup-error {
-        color: #e94560;
-        font-size: 0.9rem;
-      }
-      #loading-msg {
-        color: #aaa;
-      }
+      #start-btn:hover { background: #c73652; }
+      #setup-error { color: #e94560; font-size: 0.9rem; }
+      #loading-msg { color: #aaa; }
 
       /* ---- Duel Screen ---- */
-      #duel-screen {
-        display: none;
-        flex-direction: column;
-        height: 100vh;
-      }
+      #duel-screen { display: none; flex-direction: column; height: 100vh; }
 
       /* Top bar */
       #topbar {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 6px 12px;
-        background: #111;
-        border-bottom: 1px solid #333;
-        flex-shrink: 0;
+        display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+        background: #111; border-bottom: 1px solid #333; flex-shrink: 0;
       }
-      #topbar h2 {
-        font-size: 1rem;
-        color: #f0c040;
-        flex: 1;
-      }
+      #topbar h2 { font-size: 1rem; color: #f0c040; flex: 1; }
       .topbar-btn {
-        padding: 5px 14px;
-        border: none;
-        border-radius: 6px;
-        background: #1e3a5f;
-        color: #eee;
-        cursor: pointer;
-        font-size: 0.85rem;
+        padding: 5px 14px; border: none; border-radius: 6px;
+        background: #1e3a5f; color: #eee; cursor: pointer; font-size: 0.85rem;
       }
-      .topbar-btn:hover {
-        background: #2a5080;
-      }
-      #lp-display {
-        font-size: 0.9rem;
-        color: #8cf;
-      }
+      .topbar-btn:hover { background: #2a5080; }
+      #lp-display { font-size: 0.9rem; color: #8cf; }
+      #opp-lp-display { font-size: 0.9rem; color: #f88; }
 
-      /* メイン2カラムレイアウト */
+      /* メインレイアウト */
       #duel-body {
-        flex: 1;
-        display: flex;
-        gap: 6px;
-        padding: 6px;
-        overflow: hidden;
-        min-height: 0;
+        flex: 1; display: flex; gap: 6px; padding: 6px;
+        overflow: hidden; min-height: 0;
       }
 
-      /* 左: フィールド＋下部エリア */
-      #field {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        min-height: 0;
-        overflow: hidden;
-      }
-      #field-area {
-        flex: 1;
-        display: grid;
+      /* ===================== SOLO モード ===================== */
+      /* solo時: field列 + card-detail列 */
+      body.mode-solo #field { flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
+      body.mode-solo #field-area-solo {
+        flex: 1; display: grid;
         grid-template-columns: 160px 1fr 242px;
-        gap: 4px;
-        min-height: 0;
+        gap: 4px; min-height: 0;
       }
+      body.mode-solo #opp-bottom-area { display: none; }
+      body.mode-solo #field-area-vs   { display: none; }
+      body.mode-solo #right-pile-vs   { display: none; }
+      body.mode-solo #card-detail     { display: flex; }
+
+      /* ===================== VS モード ===================== */
+      /* vs時: duel-body は field列のみ（card-detailは右端の pile-section に内包） */
+      body.mode-vs #duel-body { gap: 0; padding: 4px; }
+      body.mode-vs #field { flex: 1; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
+      body.mode-vs #field-area-solo { display: none; }
+      body.mode-vs #field-area-vs {
+        flex: 1; display: grid;
+        /* 検索 | 相手除外 | 相手墓地 | フィールド | 墓地 | 除外 | カード詳細 */
+        grid-template-columns: 150px 110px 110px 1fr 110px 110px 240px;
+        gap: 4px; min-height: 0;
+      }
+      body.mode-vs #right-pile-vs { display: flex; }
+      body.mode-vs #card-detail   { display: none; } /* vs時はgrid内に配置 */
+
+      /* ===================== 共通ゾーン ===================== */
       .field-zones {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        justify-content: center;
-        min-height: 0;
+        display: flex; flex-direction: column; gap: 4px;
+        justify-content: center; min-height: 0;
       }
       .zone-row {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        align-items: center;
+        display: flex; gap: 10px; justify-content: center; align-items: center;
       }
       .zone {
-        width: 88px;
-        height: 124px;
-        border: 1px dashed #334;
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.03);
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.6rem;
-        color: #556;
-        flex-shrink: 0;
+        width: 88px; height: 124px; border: 1px dashed #334; border-radius: 6px;
+        background: rgba(255,255,255,0.03); position: relative;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.6rem; color: #556; flex-shrink: 0;
       }
-      .zone.drag-over {
-        border-color: #f0c040;
-        background: rgba(240, 192, 64, 0.1);
-      }
+      .zone.opp-zone { border-color: #543; background: rgba(255,100,100,0.03); }
+      .zone.drag-over { border-color: #f0c040; background: rgba(240,192,64,0.1); }
       .zone-label {
-        position: absolute;
-        bottom: 2px;
-        left: 0;
-        right: 0;
-        text-align: center;
-        font-size: 0.55rem;
-        color: #556;
-        pointer-events: none;
-      }
-      .side-col {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        align-items: center;
-        justify-content: center;
+        position: absolute; bottom: 2px; left: 0; right: 0;
+        text-align: center; font-size: 0.55rem; color: #556; pointer-events: none;
       }
       .side-zone {
-        width: 88px;
-        height: 124px;
-        border: 1px dashed #334;
-        border-radius: 6px;
-        background: rgba(255, 255, 255, 0.03);
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.55rem;
-        color: #556;
-        cursor: pointer;
-        flex-shrink: 0;
+        width: 88px; height: 124px; border: 1px dashed #334; border-radius: 6px;
+        background: rgba(255,255,255,0.03); position: relative;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.55rem; color: #556; cursor: pointer; flex-shrink: 0;
       }
-      .side-zone:hover {
-        border-color: #88aacc;
-      }
-      .side-zone .zone-label {
-        font-size: 0.5rem;
-      }
-
-      /* 下部エリア: 手札＋EX、デッキ */
-      #bottom-area {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        flex-shrink: 0;
-        min-height: 0;
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 6px;
-        padding: 4px;
-      }
-      /* 手札行: 手札 + EXデッキ */
-      #hand-ex-row {
-        display: flex;
-        gap: 4px;
-        min-height: 0;
-      }
-      /* 手札 */
-      #hand-section {
-        flex: 2;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-      }
-      #hand-area {
-        flex: 1;
-        display: flex;
-        gap: 4px;
-        align-items: center;
-        overflow-x: auto;
-        padding: 2px 4px;
-      }
-      /* pile共通 */
-      .pile-section {
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid #223;
-        border-radius: 6px;
-        overflow: hidden;
-      }
-      /* EXデッキ: 手札2:EX3 の比率 */
-      #extra-section {
-        flex: 3;
-        min-width: 0;
-      }
-      /* デッキ: 手札下（40〜60枚横並び） */
-      #deck-section {
-        width: 100%;
-      }
-      /* 墓地・除外: フィールド右側縦配置 */
-      .pile-section.vertical {
-        flex: 1;
-        min-width: 119px;
-        min-height: 0;
-      }
-      .pile-title {
-        font-size: 0.7rem;
-        color: #f0c040;
-        padding: 2px 6px;
-        background: rgba(0, 0, 0, 0.3);
-        flex-shrink: 0;
-      }
-      .pile-grid {
-        flex: 1;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 3px;
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 3px;
-        align-items: center;
-      }
-      .pile-grid.vertical-scroll {
-        overflow-x: hidden;
-        overflow-y: auto;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        align-content: flex-start;
-      }
-      /* 墓地・除外: 2列固定 */
-      #grave-pile.vertical-scroll,
-      #removed-pile.vertical-scroll {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 3px;
-        align-items: start;
-      }
-      #grave-pile.vertical-scroll img,
-      #removed-pile.vertical-scroll img {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 54 / 76;
-      }
-      .pile-grid img {
-        width: 54px;
-        height: 76px;
-        border-radius: 3px;
-        object-fit: cover;
-        cursor: grab;
-        flex-shrink: 0;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-      }
-      .pile-grid img:hover {
-        transform: scale(1.1);
-        z-index: 10;
-        position: relative;
-      }
-      .pile-grid.drag-over {
-        outline: 2px solid #f0c040;
-        background: rgba(240, 192, 64, 0.08);
-      }
-      .bottom-label {
-        font-size: 0.65rem;
-        color: #556;
-        white-space: nowrap;
-        padding: 0 4px;
-      }
-      /* 右サイドカラム（墓地・除外）: 横並び縦長 */
-      #right-side-col {
-        display: flex;
-        flex-direction: row;
-        gap: 4px;
-        width: 242px;
-        flex-shrink: 0;
-        min-height: 0;
-      }
-
-      /* Cards (フィールド・手札) */
-      .card-img {
-        width: 88px;
-        height: 124px;
-        border-radius: 4px;
-        object-fit: cover;
-        cursor: grab;
-        user-select: none;
-        display: block;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-        transition: transform 0.1s;
-        position: absolute;
-        top: 0;
-        left: 0;
-      }
-      .card-img:hover {
-        transform: scale(1.05);
-        z-index: 10;
-      }
-      .card-img.defense {
-        transform: rotate(90deg);
-      }
-      .card-img.defense:hover {
-        transform: rotate(90deg) scale(1.05);
-      }
-      .card-img.facedown {
-        filter: brightness(0.15);
-      }
-      .card-img.facedown.defense {
-        transform: rotate(90deg);
-        filter: brightness(0.15);
-      }
-      #hand-area .card-img {
-        position: relative;
-        width: 54px;
-        height: 76px;
-        flex-shrink: 0;
-      }
-      #hand-area .card-img.defense {
-        transform: none;
-      }
-
-      /* Context menu */
-      #ctx-menu {
-        position: fixed;
-        background: #1a2a3a;
-        border: 1px solid #334;
-        border-radius: 8px;
-        padding: 4px 0;
-        z-index: 1000;
-        display: none;
-        min-width: 160px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      }
-      #ctx-menu div {
-        padding: 8px 16px;
-        cursor: pointer;
-        font-size: 0.85rem;
-      }
-      #ctx-menu div:hover {
-        background: #2a3a4a;
-      }
-      #ctx-menu .sep {
-        height: 1px;
-        background: #334;
-        margin: 4px 0;
-        padding: 0;
-        cursor: default;
-      }
-      #ctx-menu .sep:hover {
-        background: #334;
-      }
-
-      /* LP editor */
-      #lp-editor {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #1a2a3a;
-        border: 1px solid #334;
-        border-radius: 12px;
-        padding: 20px;
-        z-index: 2000;
-        display: none;
-        min-width: 240px;
-      }
-      #lp-editor h3 {
-        margin-bottom: 12px;
-        color: #f0c040;
-      }
-      #lp-editor input {
-        width: 100%;
-        padding: 8px;
-        background: #0f1e2e;
-        border: 1px solid #334;
-        border-radius: 6px;
-        color: #eee;
-        font-size: 1rem;
-        margin-bottom: 10px;
-      }
-      #lp-editor .lp-btns {
-        display: flex;
-        gap: 8px;
-      }
-      #lp-editor button {
-        flex: 1;
-        padding: 8px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
-      }
-      #lp-ok {
-        background: #e94560;
-        color: #fff;
-      }
-      #lp-cancel {
-        background: #334;
-        color: #eee;
-      }
-
-      /* カード詳細パネル */
-      #card-detail {
-        width: 260px;
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid #223;
-        border-radius: 8px;
-        padding: 8px;
-        overflow-y: auto;
-      }
-      #card-detail img {
-        width: 75%;
-        align-self: center;
-        border-radius: 4px;
-        object-fit: cover;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-      }
-      #card-detail-name {
-        font-size: 0.8rem;
-        color: #f0c040;
-        font-weight: bold;
-        line-height: 1.3;
-      }
-      #card-detail-info {
-        font-size: 0.7rem;
-        color: #aaa;
-        line-height: 1.5;
-      }
-      #card-detail-text {
-        font-size: 0.8rem;
-        color: #ccc;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        border-top: 1px solid #334;
-        padding-top: 6px;
-        flex: 1;
-        overflow-y: auto;
-      }
-      #card-detail-empty {
-        font-size: 0.75rem;
-        color: #445;
-        text-align: center;
-        margin-top: 20px;
-      }
+      .side-zone:hover { border-color: #88aacc; }
+      .side-zone .zone-label { font-size: 0.5rem; }
+      .side-zone.opp-zone { border-color: #543; background: rgba(255,100,100,0.03); }
 
       /* 検索パネル */
       #search-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 6px;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid #223;
-        border-radius: 8px;
-        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 6px; padding: 6px;
+        background: rgba(255,255,255,0.02); border: 1px solid #223;
+        border-radius: 8px; overflow-y: auto; min-height: 0;
       }
-      #search-panel label {
-        font-size: 0.65rem;
-        color: #f0c040;
-      }
+      #search-panel label { font-size: 0.65rem; color: #f0c040; }
       #search-panel input {
-        width: 100%;
-        padding: 4px 6px;
-        background: #0f1e2e;
-        border: 1px solid #334;
-        border-radius: 4px;
-        color: #eee;
-        font-size: 0.75rem;
+        width: 100%; padding: 4px 6px; background: #0f1e2e;
+        border: 1px solid #334; border-radius: 4px; color: #eee; font-size: 0.75rem;
       }
-      #search-panel input:focus {
-        outline: none;
-        border-color: #f0c040;
-      }
-      .search-clear {
-        font-size: 0.65rem;
-        color: #888;
-        cursor: pointer;
-        text-align: right;
-      }
+      #search-panel input:focus { outline: none; border-color: #f0c040; }
+      .search-clear { font-size: 0.65rem; color: #888; cursor: pointer; text-align: right; }
       .search-clear:hover { color: #eee; }
       .search-mode-btn {
-        flex: 1;
-        padding: 3px 0;
-        border: 1px solid #334;
-        border-radius: 4px;
-        background: #0f1e2e;
-        color: #888;
-        font-size: 0.7rem;
-        cursor: pointer;
+        flex: 1; padding: 3px 0; border: 1px solid #334; border-radius: 4px;
+        background: #0f1e2e; color: #888; font-size: 0.7rem; cursor: pointer;
       }
-      .search-mode-btn.active {
-        background: #1e3a5f;
-        color: #f0c040;
-        border-color: #f0c040;
+      .search-mode-btn.active { background: #1e3a5f; color: #f0c040; border-color: #f0c040; }
+
+      /* 下部エリア */
+      #bottom-area {
+        display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+        background: rgba(255,255,255,0.02); border-radius: 6px; padding: 4px;
       }
-      /* ハイライト */
-      .highlight-card {
-        box-shadow: 0 0 8px 3px #f0c040, 0 0 16px 6px rgba(240,192,64,0.5) !important;
-        border-radius: 4px;
+      #opp-bottom-area {
+        display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+        background: rgba(255,80,80,0.04); border-radius: 6px; padding: 4px;
+        border: 1px solid #432;
       }
-      .token-badge {
-        position: absolute;
-        top: 2px;
-        right: 2px;
-        background: #e94560;
-        color: #fff;
-        font-size: 0.6rem;
-        border-radius: 4px;
-        padding: 1px 4px;
-        pointer-events: none;
-        z-index: 5;
+      #hand-ex-row, #opp-hand-ex-row { display: flex; gap: 4px; min-height: 0; }
+      #hand-section, #opp-hand-section {
+        flex: 2; display: flex; flex-direction: column; gap: 2px; min-width: 0;
       }
+      #hand-area, #opp-hand-area {
+        flex: 1; display: flex; gap: 4px; align-items: center;
+        overflow-x: auto; padding: 2px 4px;
+      }
+
+      /* pile共通 */
+      .pile-section {
+        flex-shrink: 0; display: flex; flex-direction: column; gap: 2px;
+        background: rgba(255,255,255,0.02); border: 1px solid #223;
+        border-radius: 6px; overflow: hidden;
+      }
+      .pile-section.opp { border-color: #432; background: rgba(255,80,80,0.03); }
+      #extra-section, #opp-extra-section { flex: 3; min-width: 0; }
+      #deck-section, #opp-deck-section { width: 100%; }
+
+      /* 縦長pile（solo時右側2列 / vs時左右各2列） */
+      .pile-col {
+        display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden;
+      }
+      .pile-section.vertical {
+        flex: 1; min-width: 0; min-height: 0;
+      }
+
+      .pile-title {
+        font-size: 0.7rem; color: #f0c040; padding: 2px 6px;
+        background: rgba(0,0,0,0.3); flex-shrink: 0;
+      }
+      .pile-title.opp { color: #f88; }
+      .pile-grid {
+        flex: 1; overflow-x: auto; overflow-y: hidden; padding: 3px;
+        display: flex; flex-wrap: nowrap; gap: 3px; align-items: center;
+      }
+      .pile-grid.vertical-scroll {
+        overflow-x: hidden; overflow-y: auto; flex-wrap: wrap;
+        align-items: flex-start; align-content: flex-start;
+      }
+      #grave-pile.vertical-scroll, #removed-pile.vertical-scroll,
+      #opp-grave-pile.vertical-scroll, #opp-removed-pile.vertical-scroll {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 3px; align-items: start;
+      }
+      #grave-pile.vertical-scroll img, #removed-pile.vertical-scroll img,
+      #opp-grave-pile.vertical-scroll img, #opp-removed-pile.vertical-scroll img {
+        width: 100%; height: auto; aspect-ratio: 54 / 76;
+      }
+      .pile-grid img {
+        width: 54px; height: 76px; border-radius: 3px; object-fit: cover;
+        cursor: grab; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      }
+      .pile-grid img:hover { transform: scale(1.1); z-index: 10; position: relative; }
+      .pile-grid.drag-over { outline: 2px solid #f0c040; background: rgba(240,192,64,0.08); }
+      .bottom-label { font-size: 0.65rem; color: #556; white-space: nowrap; padding: 0 4px; }
+      .bottom-label.opp { color: #f88; opacity: 0.8; }
+
+      /* Cards */
+      .card-img {
+        width: 88px; height: 124px; border-radius: 4px; object-fit: cover;
+        cursor: grab; user-select: none; display: block;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.6); transition: transform 0.1s;
+        position: absolute; top: 0; left: 0;
+      }
+      .card-img:hover { transform: scale(1.05); z-index: 10; }
+      .card-img.defense { transform: rotate(90deg); }
+      .card-img.defense:hover { transform: rotate(90deg) scale(1.05); }
+      .card-img.facedown { filter: brightness(0.15); }
+      .card-img.facedown.defense { transform: rotate(90deg); filter: brightness(0.15); }
+      #hand-area .card-img, #opp-hand-area .card-img {
+        position: relative; width: 54px; height: 76px; flex-shrink: 0;
+      }
+      #hand-area .card-img.defense, #opp-hand-area .card-img.defense { transform: none; }
+
+      /* Context menu */
+      #ctx-menu {
+        position: fixed; background: #1a2a3a; border: 1px solid #334;
+        border-radius: 8px; padding: 4px 0; z-index: 1000; display: none;
+        min-width: 160px; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      }
+      #ctx-menu div { padding: 8px 16px; cursor: pointer; font-size: 0.85rem; }
+      #ctx-menu div:hover { background: #2a3a4a; }
+      #ctx-menu .sep { height: 1px; background: #334; margin: 4px 0; padding: 0; cursor: default; }
+      #ctx-menu .sep:hover { background: #334; }
+
+      /* LP editor */
+      #lp-editor {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        background: #1a2a3a; border: 1px solid #334; border-radius: 12px;
+        padding: 20px; z-index: 2000; display: none; min-width: 240px;
+      }
+      #lp-editor h3 { margin-bottom: 12px; color: #f0c040; }
+      #lp-editor input {
+        width: 100%; padding: 8px; background: #0f1e2e; border: 1px solid #334;
+        border-radius: 6px; color: #eee; font-size: 1rem; margin-bottom: 10px;
+      }
+      #lp-editor .lp-btns { display: flex; gap: 8px; }
+      #lp-editor button { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+      #lp-ok { background: #e94560; color: #fff; }
+      #lp-cancel { background: #334; color: #eee; }
+
+      /* カード詳細パネル（solo時は duel-body 右端、vs時は field-area-vs 最終列） */
+      #card-detail, #card-detail-vs {
+        flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;
+        background: rgba(255,255,255,0.02); border: 1px solid #223; border-radius: 8px;
+        padding: 8px; overflow-y: auto;
+      }
+      #card-detail { width: 260px; }
+      #card-detail-vs { min-height: 0; }
+      #card-detail img, #card-detail-vs img {
+        width: 75%; align-self: center; border-radius: 4px; object-fit: cover;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      }
+      .cd-name { font-size: 0.8rem; color: #f0c040; font-weight: bold; line-height: 1.3; }
+      .cd-info { font-size: 0.7rem; color: #aaa; line-height: 1.5; }
+      .cd-text { font-size: 0.8rem; color: #ccc; line-height: 1.6; white-space: pre-wrap; border-top: 1px solid #334; padding-top: 6px; flex: 1; overflow-y: auto; }
+      .cd-empty { font-size: 0.75rem; color: #445; text-align: center; margin-top: 20px; }
+
+      /* ハイライト / badge */
+      .highlight-card { box-shadow: 0 0 8px 3px #f0c040, 0 0 16px 6px rgba(240,192,64,0.5) !important; border-radius: 4px; }
       .stack-badge {
-        position: absolute;
-        bottom: 4px;
-        right: 4px;
-        background: rgba(0,0,0,0.75);
-        color: #f0c040;
-        font-size: 0.65rem;
-        font-weight: bold;
-        border-radius: 4px;
-        padding: 1px 5px;
-        pointer-events: none;
-        z-index: 20;
+        position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.75);
+        color: #f0c040; font-size: 0.65rem; font-weight: bold; border-radius: 4px;
+        padding: 1px 5px; pointer-events: none; z-index: 20;
       }
     </style>
   </head>
   <body>
-    <!-- Setup Screen -->
+    <!-- ==================== Setup Screen ==================== -->
     <div id="setup-screen">
       <h1>🃏 デュエルシミュレーター</h1>
-
-      <div
-        style="display: flex; flex-direction: column; gap: 8px; width: 400px"
-      >
-        <p style="color: #f0c040; font-size: 0.9rem">
-          ① 公式DBのデッキURLから読み込む
-        </p>
-        <div style="display: flex; gap: 8px">
-          <input
-            id="deck-url-input"
-            type="text"
+      <div style="display:flex;flex-direction:column;gap:12px;width:500px;">
+        <p style="color:#f0c040;font-size:0.9rem;">① 自分のデッキ（URLまたはID入力）</p>
+        <div style="display:flex;gap:8px;">
+          <input id="deck-url-input" type="text"
             placeholder="https://www.db.yugioh-card.com/yugiohdb/member_deck.action?..."
-            style="
-              flex: 1;
-              padding: 10px;
-              background: #1a2a3a;
-              border: 1px solid #334;
-              border-radius: 8px;
-              color: #eee;
-              font-size: 0.85rem;
-            "
-          />
-          <button
-            id="url-btn"
-            onclick="loadFromUrl()"
-            style="
-              padding: 10px 16px;
-              background: #2a6040;
-              border: none;
-              border-radius: 8px;
-              color: #fff;
-              cursor: pointer;
-              white-space: nowrap;
-            "
-          >
+            style="flex:1;padding:10px;background:#1a2a3a;border:1px solid #334;border-radius:8px;color:#eee;font-size:0.85rem;" />
+          <button id="url-btn" onclick="loadFromUrl('my')"
+            style="padding:10px 16px;background:#2a6040;border:none;border-radius:8px;color:#fff;cursor:pointer;white-space:nowrap;">
             URLから読み込む
           </button>
         </div>
+        <textarea id="deck-input" placeholder="カードID（1行1枚）&#10;23160&#10;46986414&#10;..."
+          style="height:100px;width:100%;background:#1a2a3a;color:#eee;border:1px solid #334;border-radius:8px;padding:12px;font-size:0.85rem;resize:vertical;"></textarea>
 
-        <p style="color: #aaa; font-size: 0.8rem; text-align: center">
-          ── または ──
-        </p>
+        <p style="color:#f88;font-size:0.9rem;">② 相手のデッキ（URLまたはID入力、省略可）</p>
+        <div style="display:flex;gap:8px;">
+          <input id="opp-deck-url-input" type="text"
+            placeholder="https://www.db.yugioh-card.com/yugiohdb/member_deck.action?..."
+            style="flex:1;padding:10px;background:#1a2a3a;border:1px solid #543;border-radius:8px;color:#eee;font-size:0.85rem;" />
+          <button id="opp-url-btn" onclick="loadFromUrl('opp')"
+            style="padding:10px 16px;background:#603030;border:none;border-radius:8px;color:#fff;cursor:pointer;white-space:nowrap;">
+            URLから読み込む
+          </button>
+        </div>
+        <textarea id="opp-deck-input" placeholder="カードID（1行1枚）&#10;..."
+          style="height:80px;width:100%;background:#1a2a3a;color:#eee;border:1px solid #543;border-radius:8px;padding:12px;font-size:0.85rem;resize:vertical;"></textarea>
 
-        <p style="color: #f0c040; font-size: 0.9rem">
-          ② カードIDを1行1枚で入力（最大60枚）
-        </p>
-        <textarea
-          id="deck-input"
-          placeholder="23160&#10;46986414&#10;89631139&#10;..."
-          style="height: 140px"
-        ></textarea>
         <button id="start-btn">デッキ読み込み開始</button>
       </div>
-
       <div id="setup-error"></div>
       <div id="loading-msg"></div>
-      <p><a href="/" style="color: #88aacc">← カード検索に戻る</a></p>
+      <p><a href="/" style="color:#88aacc">← カード検索に戻る</a></p>
     </div>
 
-    <!-- Duel Screen -->
+    <!-- ==================== Duel Screen ==================== -->
     <div id="duel-screen">
       <div id="topbar">
         <h2>🃏 デュエルシミュレーター</h2>
-        <span id="lp-display">LP: <span id="lp-val">8000</span></span>
-        <button class="topbar-btn" onclick="editLP()">LP変更</button>
-        <button class="topbar-btn" onclick="drawCard()">ドロー</button>
-        <button class="topbar-btn" onclick="shuffleDeck()">シャッフル</button>
+        <span id="opp-lp-display" style="display:none;">相手LP: <span id="opp-lp-val">8000</span></span>
+        <button class="topbar-btn opp-only" style="display:none;" onclick="editLP('opp')">相手LP変更</button>
+        <span id="lp-display">自分LP: <span id="lp-val">8000</span></span>
+        <button class="topbar-btn" onclick="editLP('my')">自分LP変更</button>
+        <button class="topbar-btn" onclick="drawCard('my')">ドロー</button>
+        <button class="topbar-btn opp-only" style="display:none;" onclick="drawCard('opp')">相手ドロー</button>
+        <button class="topbar-btn" onclick="shuffleDeck('my')">シャッフル</button>
+        <button class="topbar-btn opp-only" style="display:none;" onclick="shuffleDeck('opp')">相シャッフル</button>
         <button class="topbar-btn" onclick="resetField()">リセット</button>
-        <button class="topbar-btn" onclick="location.reload()">
-          デッキ変更
-        </button>
+        <button class="topbar-btn" onclick="location.reload()">デッキ変更</button>
       </div>
 
       <div id="duel-body">
-        <!-- 左: フィールド＋下部エリア -->
         <div id="field">
-          <div id="field-area">
-            <!-- 左: 検索パネル -->
+
+          <!-- 相手手札+デッキ（VS時のみ表示） -->
+          <div id="opp-bottom-area">
+            <div id="opp-hand-ex-row">
+              <div id="opp-hand-section">
+                <div class="bottom-label opp">相手手札 (<span id="opp-hand-count">0</span>)</div>
+                <div id="opp-hand-area" data-zone="opp-hand"></div>
+              </div>
+              <div class="pile-section opp" id="opp-extra-section">
+                <div class="pile-title opp">相手EX <span id="opp-extra-count">0</span></div>
+                <div class="pile-grid" id="opp-extra-pile"></div>
+              </div>
+            </div>
+            <div class="pile-section opp" id="opp-deck-section">
+              <div class="pile-title opp">相手デッキ <span id="opp-deck-count">0</span></div>
+              <div class="pile-grid" id="opp-deck-pile"></div>
+            </div>
+          </div>
+
+          <!-- ===== SOLO レイアウト: 検索 | ゾーン | 墓地/除外 ===== -->
+          <div id="field-area-solo">
+            <!-- 左: 検索 -->
             <div id="search-panel">
               <label>🔍 カード名</label>
               <input id="search-name" type="text" placeholder="トゥーン、龍…" />
               <label>🔍 カードテキスト</label>
               <input id="search-text" type="text" placeholder="テキスト検索…" />
               <label>🔍 属性</label>
-              <input id="search-attr" type="text" placeholder="炕、水、闇…" />
+              <input id="search-attr" type="text" placeholder="炎、水、闇…" />
               <label>🔍 種族</label>
               <input id="search-race" type="text" placeholder="龍族、戦士族…" />
               <label>🔍 ATK</label>
@@ -687,64 +359,34 @@
               </div>
               <span class="search-clear" onclick="clearAllSearch()">全てクリア</span>
             </div>
-            <div class="field-zones">
-              <!-- EXモンスターゾーン: 左にフィールドゾーンを隔隔で配置 -->
-              <div class="zone-row" id="my-ex-mon-row">
-                <div
-                  class="side-zone"
-                  id="field-zone-btn"
-                  title="フィールド魔法"
-                  data-zone="field-magic"
-                  style="margin-right: 8px;"
-                >
+
+            <!-- 中央: ゾーン（solo） -->
+            <div class="field-zones" id="zones-solo">
+              <div class="zone-row">
+                <div class="side-zone" data-zone="field-magic" title="フィールド魔法">
                   <span class="zone-label">フィールド</span>
                 </div>
-                <div class="zone" data-zone="ex-mon-0">
-                  <span class="zone-label">EX</span>
-                </div>
-                <div class="zone" data-zone="ex-mon-1">
-                  <span class="zone-label">EX</span>
-                </div>
+                <div class="zone" data-zone="ex-mon-0"><span class="zone-label">EX</span></div>
+                <div class="zone" data-zone="ex-mon-1"><span class="zone-label">EX</span></div>
               </div>
-              <!-- メインモンスターゾーン 5つ -->
-              <div class="zone-row" id="my-mon-row">
-                <div class="zone" data-zone="mon-0">
-                  <span class="zone-label">モンスター</span>
-                </div>
-                <div class="zone" data-zone="mon-1">
-                  <span class="zone-label">モンスター</span>
-                </div>
-                <div class="zone" data-zone="mon-2">
-                  <span class="zone-label">モンスター</span>
-                </div>
-                <div class="zone" data-zone="mon-3">
-                  <span class="zone-label">モンスター</span>
-                </div>
-                <div class="zone" data-zone="mon-4">
-                  <span class="zone-label">モンスター</span>
-                </div>
+              <div class="zone-row">
+                <div class="zone" data-zone="mon-0"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-1"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-2"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-3"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-4"><span class="zone-label">モンスター</span></div>
               </div>
-              <!-- 魔法罠ゾーン 5つ -->
-              <div class="zone-row" id="my-st-row">
-                <div class="zone" data-zone="st-0">
-                  <span class="zone-label">魔/罠</span>
-                </div>
-                <div class="zone" data-zone="st-1">
-                  <span class="zone-label">魔/罠</span>
-                </div>
-                <div class="zone" data-zone="st-2">
-                  <span class="zone-label">魔/罠</span>
-                </div>
-                <div class="zone" data-zone="st-3">
-                  <span class="zone-label">魔/罠</span>
-                </div>
-                <div class="zone" data-zone="st-4">
-                  <span class="zone-label">魔/罠</span>
-                </div>
+              <div class="zone-row">
+                <div class="zone" data-zone="st-0"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-1"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-2"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-3"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-4"><span class="zone-label">魔/罠</span></div>
               </div>
             </div>
-            <!-- 右サイド: 墓地・除外 縦配置 -->
-            <div id="right-side-col">
+
+            <!-- 右: 墓地/除外（solo） -->
+            <div style="display:flex;flex-direction:row;gap:4px;min-height:0;">
               <div class="pile-section vertical">
                 <div class="pile-title">墓地 <span id="grave-count">0</span></div>
                 <div class="pile-grid vertical-scroll" id="grave-pile"></div>
@@ -756,13 +398,117 @@
             </div>
           </div>
 
-          <!-- 下部: 手札+EX行、デッキ行 -->
+          <!-- ===== VS レイアウト: 検索 | 相手除外 | 相手墓地 | ゾーン | 墓地 | 除外 | カード詳細 ===== -->
+          <div id="field-area-vs">
+            <!-- col1: 検索（search-panelを再利用しないため複製不要。display切替でsolo側を隠すとidが消えるのでVS用を別idで作成） -->
+            <div id="search-panel-vs" style="display:flex;flex-direction:column;gap:6px;padding:6px;background:rgba(255,255,255,0.02);border:1px solid #223;border-radius:8px;overflow-y:auto;min-height:0;">
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 カード名</label>
+              <input id="search-name-vs" type="text" placeholder="トゥーン、龍…"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 テキスト</label>
+              <input id="search-text-vs" type="text" placeholder="テキスト検索…"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 属性</label>
+              <input id="search-attr-vs" type="text" placeholder="炎、水、闇…"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 種族</label>
+              <input id="search-race-vs" type="text" placeholder="龍族、戦士族…"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 ATK</label>
+              <input id="search-atk-vs" type="text" placeholder="2500"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <label style="font-size:0.65rem;color:#f0c040;">🔍 DEF</label>
+              <input id="search-def-vs" type="text" placeholder="2000"
+                style="width:100%;padding:4px 6px;background:#0f1e2e;border:1px solid #334;border-radius:4px;color:#eee;font-size:0.75rem;" />
+              <div style="display:flex;gap:4px;margin-top:4px;">
+                <button class="search-mode-btn active" id="btn-and-vs" onclick="setSearchMode('and')">AND</button>
+                <button class="search-mode-btn" id="btn-or-vs" onclick="setSearchMode('or')">OR</button>
+              </div>
+              <span class="search-clear" onclick="clearAllSearch()">全てクリア</span>
+            </div>
+
+            <!-- col2: 相手除外（縦長） -->
+            <div class="pile-section vertical opp" style="min-height:0;">
+              <div class="pile-title opp">相手除外 <span id="opp-removed-count">0</span></div>
+              <div class="pile-grid vertical-scroll" id="opp-removed-pile"></div>
+            </div>
+
+            <!-- col3: 相手墓地（縦長） -->
+            <div class="pile-section vertical opp" style="min-height:0;">
+              <div class="pile-title opp">相手墓地 <span id="opp-grave-count">0</span></div>
+              <div class="pile-grid vertical-scroll" id="opp-grave-pile"></div>
+            </div>
+
+            <!-- col4: フィールド（VS用ゾーン） -->
+            <div class="field-zones" id="zones-vs">
+              <!-- 相手魔法/罠 -->
+              <div class="zone-row">
+                <div class="zone opp-zone" data-zone="opp-st-0"><span class="zone-label">相手魔/罠</span></div>
+                <div class="zone opp-zone" data-zone="opp-st-1"><span class="zone-label">相手魔/罠</span></div>
+                <div class="zone opp-zone" data-zone="opp-st-2"><span class="zone-label">相手魔/罠</span></div>
+                <div class="zone opp-zone" data-zone="opp-st-3"><span class="zone-label">相手魔/罠</span></div>
+                <div class="zone opp-zone" data-zone="opp-st-4"><span class="zone-label">相手魔/罠</span></div>
+              </div>
+              <!-- 相手モンスター -->
+              <div class="zone-row">
+                <div class="zone opp-zone" data-zone="opp-mon-0"><span class="zone-label">相手M</span></div>
+                <div class="zone opp-zone" data-zone="opp-mon-1"><span class="zone-label">相手M</span></div>
+                <div class="zone opp-zone" data-zone="opp-mon-2"><span class="zone-label">相手M</span></div>
+                <div class="zone opp-zone" data-zone="opp-mon-3"><span class="zone-label">相手M</span></div>
+                <div class="zone opp-zone" data-zone="opp-mon-4"><span class="zone-label">相手M</span></div>
+              </div>
+              <!-- EXゾーン共有 + 自分フィールド(左) 相手フィールド(右) -->
+              <div class="zone-row">
+                <div class="side-zone" data-zone="field-magic" title="フィールド魔法">
+                  <span class="zone-label">フィールド</span>
+                </div>
+                <div class="zone" data-zone="ex-mon-0"><span class="zone-label">EX</span></div>
+                <div class="zone" data-zone="ex-mon-1"><span class="zone-label">EX</span></div>
+                <div class="side-zone opp-zone" data-zone="opp-field-magic" title="相手フィールド魔法">
+                  <span class="zone-label">相手フィールド</span>
+                </div>
+              </div>
+              <!-- 自分モンスター -->
+              <div class="zone-row">
+                <div class="zone" data-zone="mon-0"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-1"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-2"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-3"><span class="zone-label">モンスター</span></div>
+                <div class="zone" data-zone="mon-4"><span class="zone-label">モンスター</span></div>
+              </div>
+              <!-- 自分魔法/罠 -->
+              <div class="zone-row">
+                <div class="zone" data-zone="st-0"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-1"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-2"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-3"><span class="zone-label">魔/罠</span></div>
+                <div class="zone" data-zone="st-4"><span class="zone-label">魔/罠</span></div>
+              </div>
+            </div>
+
+            <!-- col5: 墓地（縦長） -->
+            <div class="pile-section vertical" style="min-height:0;">
+              <div class="pile-title">墓地 <span id="grave-count-vs">0</span></div>
+              <div class="pile-grid vertical-scroll" id="grave-pile-vs"></div>
+            </div>
+
+            <!-- col6: 除外（縦長） -->
+            <div class="pile-section vertical" style="min-height:0;">
+              <div class="pile-title">除外 <span id="removed-count-vs">0</span></div>
+              <div class="pile-grid vertical-scroll" id="removed-pile-vs"></div>
+            </div>
+
+            <!-- col7: カード詳細 -->
+            <div id="card-detail-vs">
+              <div class="cd-empty">カードをクリック</div>
+            </div>
+          </div>
+
+          <!-- 自分手札+デッキ -->
           <div id="bottom-area">
             <div id="hand-ex-row">
               <div id="hand-section">
-                <div class="bottom-label">
-                  手札 (<span id="hand-count">0</span>)
-                </div>
+                <div class="bottom-label">手札 (<span id="hand-count">0</span>)</div>
                 <div id="hand-area" data-zone="hand"></div>
               </div>
               <div class="pile-section" id="extra-section">
@@ -777,9 +523,9 @@
           </div>
         </div>
 
-        <!-- 中央: カード詳細パネル -->
+        <!-- カード詳細（solo時のみ右端に表示） -->
         <div id="card-detail">
-          <div id="card-detail-empty">カードをクリック</div>
+          <div class="cd-empty">カードをクリック</div>
         </div>
       </div>
     </div>
@@ -807,497 +553,395 @@
 
     <!-- LP Editor -->
     <div id="lp-editor">
-      <h3>LP変更</h3>
+      <h3 id="lp-editor-title">LP変更</h3>
       <input id="lp-input" type="number" value="8000" />
       <div class="lp-btns">
         <button id="lp-ok" onclick="applyLP()">適用</button>
-        <button
-          id="lp-cancel"
-          onclick="document.getElementById('lp-editor').style.display = 'none'"
-        >
-          キャンセル
-        </button>
+        <button id="lp-cancel" onclick="document.getElementById('lp-editor').style.display='none'">キャンセル</button>
       </div>
     </div>
 
     <script>
       // ===== State =====
-      let deck = []; // {cid, name, imageUrl, ...}
-      let hand = [];
-      let graveyard = [];
-      let removed = [];
-      let extraDeck = [];
+      let deck = [], hand = [], graveyard = [], removed = [], extraDeck = [];
       let lp = 8000;
-
-      // zone -> card (only one card per zone for field zones)
-      // zone key: 'mon-0'..'mon-4', 'st-0'..'st-4', 'opp-mon-0..4', 'opp-st-0..4', 'field-magic'
-      const fieldCards = {}; // zoneKey -> {card, facedown, defense}
-
-      let ctxTarget = null;
-      let graveCtxIdx = -1;
+      let oppDeck = [], oppHand = [], oppGraveyard = [], oppRemoved = [], oppExtraDeck = [];
+      let oppLp = 8000;
+      const fieldCards = {};
+      let ctxTarget = null, lpTarget = 'my';
+      let vsMode = false; // 相手デッキ有無
 
       function showCtxMenu(e) {
-        const menu = document.getElementById("ctx-menu");
-        menu.style.display = "block";
-        menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + "px";
-        menu.style.top = Math.min(e.clientY, window.innerHeight - 260) + "px";
+        const menu = document.getElementById('ctx-menu');
+        menu.style.display = 'block';
+        menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+        menu.style.top  = Math.min(e.clientY, window.innerHeight - 260) + 'px';
       }
 
       // ===== Setup =====
       async function fetchCardData(cids) {
-        const res = await fetch("/api/cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const res = await fetch('/api/cards', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cids }),
         });
-        if (!res.ok) throw new Error("カードデータの取得に失敗しました");
+        if (!res.ok) throw new Error('カードデータの取得に失敗しました');
         return res.json();
       }
-
       function buildDeck(cards) {
-        return cards.map((c, i) => ({
-          ...c,
-          uid: `${c.cid}-${i}-${Math.random().toString(36).slice(2)}`,
-        }));
+        return cards.map((c, i) => ({ ...c, uid: `${c.cid}-${i}-${Math.random().toString(36).slice(2)}` }));
       }
-
-      async function loadFromUrl() {
-        const url = document.getElementById("deck-url-input").value.trim();
-        if (!url) {
-          showError("URLを入力してください");
-          return;
-        }
-        setLoading("デッキURLを解析中...");
-        document.getElementById("url-btn").disabled = true;
-
+      async function loadFromUrl(side) {
+        const inputId = side === 'opp' ? 'opp-deck-url-input' : 'deck-url-input';
+        const btnId   = side === 'opp' ? 'opp-url-btn' : 'url-btn';
+        const url = document.getElementById(inputId).value.trim();
+        if (!url) { showError('URLを入力してください'); return; }
+        setLoading('デッキURLを解析中...');
+        document.getElementById(btnId).disabled = true;
         try {
-          const r = await fetch(
-            "/api/deck-from-url?url=" + encodeURIComponent(url),
-          );
+          const r = await fetch('/api/deck-from-url?url=' + encodeURIComponent(url));
           const data = await r.json();
           if (data.error) throw new Error(data.error);
-
-          setLoading(
-            `メイン${data.cids.length}枚 / EX${data.extraCids.length}枚のカードデータを取得中...`,
-          );
-          const [mainCards, extraCards] = await Promise.all([
-            fetchCardData(data.cids),
-            fetchCardData(data.extraCids),
-          ]);
-
-          deck = buildDeck(mainCards);
-          extraDeck = buildDeck(extraCards);
-
-          if (!deck.length)
-            throw new Error("メインデッキのカードが取得できませんでした");
-          setLoading(
-            `メイン${deck.length}枚 / EX${extraDeck.length}枚 読み込み完了`,
-          );
-          shuffleDeck();
-          startDuel();
+          setLoading(`メイン${data.cids.length}枚 / EX${data.extraCids.length}枚 取得中...`);
+          const [mainCards, extraCards] = await Promise.all([fetchCardData(data.cids), fetchCardData(data.extraCids)]);
+          if (side === 'opp') { oppDeck = buildDeck(mainCards); oppExtraDeck = buildDeck(extraCards); }
+          else                { deck = buildDeck(mainCards);    extraDeck    = buildDeck(extraCards); }
+          setLoading(`${side === 'opp' ? '相手' : '自分'}: メイン${mainCards.length}枚 / EX${extraCards.length}枚 読み込み完了`);
         } catch (e) {
           showError(e.message);
-          document.getElementById("url-btn").disabled = false;
+          document.getElementById(btnId).disabled = false;
         }
       }
 
-      document
-        .getElementById("start-btn")
-        .addEventListener("click", async () => {
-          const raw = document.getElementById("deck-input").value.trim();
-          const cids = raw
-            .split("\n")
-            .map((s) => s.trim())
-            .filter((s) => /^\d+$/.test(s))
-            .slice(0, 60);
-          if (!cids.length) {
-            showError("カードIDを入力してください");
-            return;
+      document.getElementById('start-btn').addEventListener('click', async () => {
+        document.getElementById('start-btn').disabled = true;
+        // 自分デッキ
+        if (!deck.length) {
+          const url = document.getElementById('deck-url-input').value.trim();
+          if (url) await loadFromUrl('my');
+        }
+        if (!deck.length) {
+          const cids = document.getElementById('deck-input').value.trim()
+            .split('\n').map(s=>s.trim()).filter(s=>/^\d+$/.test(s)).slice(0,60);
+          if (cids.length) {
+            setLoading(`自分デッキ ${cids.length}枚 読み込み中...`);
+            try { deck = buildDeck(await fetchCardData(cids)); }
+            catch (e) { showError(e.message); document.getElementById('start-btn').disabled = false; return; }
           }
-
-          setLoading(`${cids.length}枚のカードを読み込み中...`);
-          document.getElementById("start-btn").disabled = true;
-
-          try {
-            const cards = await fetchCardData(cids);
-            deck = buildDeck(cards);
-            if (!deck.length)
-              throw new Error("有効なカードが見つかりませんでした");
-            setLoading(`メイン${deck.length}枚 読み込み完了`);
-            shuffleDeck();
-            startDuel();
-          } catch (e) {
-            showError(e.message);
-            document.getElementById("start-btn").disabled = false;
+        }
+        if (!deck.length) {
+          showError('自分のデッキを入力またはURLで読み込んでください');
+          document.getElementById('start-btn').disabled = false; return;
+        }
+        // 相手デッキ
+        if (!oppDeck.length) {
+          const url = document.getElementById('opp-deck-url-input').value.trim();
+          if (url) await loadFromUrl('opp');
+        }
+        if (!oppDeck.length) {
+          const cids = document.getElementById('opp-deck-input').value.trim()
+            .split('\n').map(s=>s.trim()).filter(s=>/^\d+$/.test(s)).slice(0,60);
+          if (cids.length) {
+            setLoading(`相手デッキ ${cids.length}枚 読み込み中...`);
+            try { oppDeck = buildDeck(await fetchCardData(cids)); }
+            catch (e) { showError(e.message); document.getElementById('start-btn').disabled = false; return; }
           }
-        });
+        }
+        vsMode = oppDeck.length > 0;
+        shuffleDeck('my');
+        if (vsMode) shuffleDeck('opp');
+        startDuel();
+      });
 
-      function showError(msg) {
-        document.getElementById("setup-error").textContent = msg;
-        document.getElementById("loading-msg").textContent = "";
-      }
-      function setLoading(msg) {
-        document.getElementById("setup-error").textContent = "";
-        document.getElementById("loading-msg").textContent = msg;
-      }
+      function showError(msg) { document.getElementById('setup-error').textContent = msg; document.getElementById('loading-msg').textContent = ''; }
+      function setLoading(msg) { document.getElementById('setup-error').textContent = ''; document.getElementById('loading-msg').textContent = msg; }
 
       function startDuel() {
-        document.getElementById("setup-screen").style.display = "none";
-        document.getElementById("duel-screen").style.display = "flex";
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('duel-screen').style.display = 'flex';
+
+        if (vsMode) {
+          document.body.classList.add('mode-vs');
+          // 相手用topbarボタン表示
+          document.querySelectorAll('.opp-only').forEach(el => el.style.display = '');
+          document.getElementById('opp-lp-display').style.display = '';
+          // VS用検索inputにイベント登録
+          ['name','text','attr','race','atk','def'].forEach(k => {
+            document.getElementById(`search-${k}-vs`).addEventListener('input', applyHighlight);
+          });
+        } else {
+          document.body.classList.add('mode-solo');
+        }
+
         setupDropTargets();
         updateCounts();
-        for (let i = 0; i < 5; i++) drawCard(true);
+        for (let i = 0; i < 5; i++) drawCard('my', true);
+        if (vsMode) for (let i = 0; i < 5; i++) drawCard('opp', true);
       }
 
       // ===== Deck ops =====
-      function shuffleDeck() {
-        for (let i = deck.length - 1; i > 0; i--) {
+      function shuffleDeck(side) {
+        const d = side === 'opp' ? oppDeck : deck;
+        for (let i = d.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [deck[i], deck[j]] = [deck[j], deck[i]];
+          [d[i], d[j]] = [d[j], d[i]];
         }
         updateCounts();
       }
-
-      function drawCard(silent = false) {
-        if (!deck.length) {
-          if (!silent) alert("デッキが空です");
-          return;
-        }
-        const card = deck.shift();
-        hand.push(card);
-        renderHand();
+      function drawCard(side, silent = false) {
+        const d = side === 'opp' ? oppDeck : deck;
+        const h = side === 'opp' ? oppHand : hand;
+        if (!d.length) { if (!silent) alert('デッキが空です'); return; }
+        h.push(d.shift());
+        side === 'opp' ? renderOppHand() : renderHand();
         updateCounts();
       }
-
       function resetField() {
-        if (!confirm("フィールドをリセットしますか？")) return;
-        Object.keys(fieldCards).forEach((zone) => {
+        if (!confirm('フィールドをリセットしますか？')) return;
+        Object.keys(fieldCards).forEach(zone => {
           if (fieldCards[zone]) {
-            fieldCards[zone].stack.forEach(e => deck.push(e.card));
+            const isOpp = zone.startsWith('opp-');
+            fieldCards[zone].stack.forEach(e => (isOpp ? oppDeck : deck).push(e.card));
             delete fieldCards[zone];
           }
         });
-        deck.push(...hand);
-        hand = [];
-        graveyard = [];
-        removed = [];
-        lp = 8000;
-        document.getElementById("lp-val").textContent = lp;
-        shuffleDeck();
-        renderHand();
-        renderAllZones();
-        updateCounts();
+        deck.push(...hand); hand = []; graveyard = []; removed = [];
+        lp = 8000; document.getElementById('lp-val').textContent = lp;
+        if (vsMode) {
+          oppDeck.push(...oppHand); oppHand = []; oppGraveyard = []; oppRemoved = [];
+          oppLp = 8000; document.getElementById('opp-lp-val').textContent = oppLp;
+          shuffleDeck('opp');
+        }
+        shuffleDeck('my');
+        renderHand(); renderOppHand(); renderAllZones(); updateCounts();
+      }
+
+      // ===== Pile helper =====
+      function getPile(zone) {
+        const map = { hand, 'opp-hand': oppHand, deck, 'opp-deck': oppDeck,
+          grave: graveyard, 'opp-grave': oppGraveyard, removed, 'opp-removed': oppRemoved,
+          extra: extraDeck, 'opp-extra': oppExtraDeck };
+        return map[zone] ?? null;
+      }
+
+      // ===== Search queries (unified for solo/vs) =====
+      function getSearchQueries() {
+        const suffix = vsMode ? '-vs' : '';
+        const g = id => (document.getElementById(id + suffix) || document.getElementById(id))?.value.trim() ?? '';
+        return { name: g('search-name'), text: g('search-text'), attr: g('search-attr'),
+                 race: g('search-race'), atk: g('search-atk'),   def: g('search-def') };
       }
 
       // ===== Render =====
       function renderHand() {
-        const area = document.getElementById("hand-area");
-        area.innerHTML = "";
-        const q = getSearchQueries();
-        const hasQuery = Object.values(q).some(Boolean);
-        const sorted = hasQuery
-          ? [...hand].sort((a, b) => matchCard(b, q) - matchCard(a, q))
-          : hand;
-        sorted.forEach((card) => {
+        const area = document.getElementById('hand-area');
+        area.innerHTML = '';
+        const q = getSearchQueries(), hasQ = Object.values(q).some(Boolean);
+        const sorted = hasQ ? [...hand].sort((a,b) => matchCard(b,q) - matchCard(a,q)) : hand;
+        sorted.forEach(card => {
           const img = makeCardImg(card, false, false);
-          img.dataset.uid = card.uid;
-          img.dataset.zone = "hand";
-          if (hasQuery && matchCard(card, q)) img.classList.add("highlight-card");
+          img.dataset.uid = card.uid; img.dataset.zone = 'hand';
+          if (hasQ && matchCard(card,q)) img.classList.add('highlight-card');
           area.appendChild(img);
         });
-        document.getElementById("hand-count").textContent = hand.length;
+        document.getElementById('hand-count').textContent = hand.length;
       }
-
+      function renderOppHand() {
+        const area = document.getElementById('opp-hand-area');
+        area.innerHTML = '';
+        const q = getSearchQueries(), hasQ = Object.values(q).some(Boolean);
+        const sorted = hasQ ? [...oppHand].sort((a,b) => matchCard(b,q) - matchCard(a,q)) : oppHand;
+        sorted.forEach(card => {
+          const img = makeCardImg(card, false, false);
+          img.dataset.uid = card.uid; img.dataset.zone = 'opp-hand';
+          if (hasQ && matchCard(card,q)) img.classList.add('highlight-card');
+          area.appendChild(img);
+        });
+        document.getElementById('opp-hand-count').textContent = oppHand.length;
+      }
+      function getActiveZoneContainer() {
+        if (vsMode) return document.getElementById('zones-vs');
+        return document.getElementById('zones-solo');
+      }
       function renderAllZones() {
-        document
-          .querySelectorAll(".zone[data-zone], .side-zone[data-zone]")
-          .forEach((zoneEl) => {
-            const key = zoneEl.dataset.zone;
-            zoneEl.querySelectorAll(".card-img, .stack-badge").forEach((el) => el.remove());
-            if (fieldCards[key]) renderStackInZone(zoneEl, key);
-          });
+        const container = getActiveZoneContainer();
+        container.querySelectorAll('.zone[data-zone], .side-zone[data-zone]').forEach(zoneEl => {
+          const key = zoneEl.dataset.zone;
+          zoneEl.querySelectorAll('.card-img, .stack-badge').forEach(el => el.remove());
+          if (fieldCards[key]) renderStackInZone(zoneEl, key);
+        });
       }
-
       function renderZone(key) {
-        const zoneEl = document.querySelector(`[data-zone="${key}"]`);
+        const container = getActiveZoneContainer();
+        const zoneEl = container.querySelector(`[data-zone="${key}"]`);
         if (!zoneEl) return;
-        zoneEl.querySelectorAll(".card-img, .stack-badge").forEach((el) => el.remove());
+        zoneEl.querySelectorAll('.card-img, .stack-badge').forEach(el => el.remove());
         if (fieldCards[key]) renderStackInZone(zoneEl, key);
       }
-
       function renderStackInZone(zoneEl, key) {
-        const stack = fieldCards[key].stack;
-        const OFFSET = 14;
-        const last = stack.length - 1;
+        const stack = fieldCards[key].stack, OFFSET = 14, last = stack.length - 1;
         stack.forEach((entry, i) => {
           const isTop = i === last;
-          const offset = (last - i) * OFFSET;
-          // 下に重ねられたカードは表の縦で固定、一番上のカードは元の表示形式を維持
-          const fd = isTop ? entry.facedown : false;
-          const df = isTop ? entry.defense  : false;
-          const img = makeCardImg(entry.card, fd, df);
-          img.dataset.uid = entry.card.uid;
-          img.dataset.zone = key;
-          img.style.top    = offset + "px";
-          img.style.left   = offset + "px";
-          img.style.zIndex = i + 1;
+          const img = makeCardImg(entry.card, isTop ? entry.facedown : false, isTop ? entry.defense : false);
+          img.dataset.uid = entry.card.uid; img.dataset.zone = key;
+          img.style.top = ((last-i)*OFFSET)+'px'; img.style.left = ((last-i)*OFFSET)+'px'; img.style.zIndex = i+1;
           zoneEl.appendChild(img);
         });
         if (stack.length > 1) {
-          const badge = document.createElement("div");
-          badge.className = "stack-badge";
-          badge.textContent = stack.length - 1;
+          const badge = document.createElement('div');
+          badge.className = 'stack-badge'; badge.textContent = stack.length - 1;
           zoneEl.appendChild(badge);
         }
       }
-
       function makeCardImg(card, facedown, defense) {
-        const img = document.createElement("img");
-        img.src = card.imageUrl || "";
-        img.alt = card.name;
-        img.className =
-          "card-img" +
-          (defense ? " defense" : "") +
-          (facedown ? " facedown" : "");
-        img.draggable = true;
-        img.title = card.name;
-
-        img.addEventListener("dragstart", onDragStart);
-        img.addEventListener("contextmenu", onContextMenu);
-        img.addEventListener("click", () => showCardDetail(card));
+        const img = document.createElement('img');
+        img.src = card.imageUrl||''; img.alt = card.name;
+        img.className = 'card-img'+(defense?' defense':'')+(facedown?' facedown':'');
+        img.draggable = true; img.title = card.name;
+        img.addEventListener('dragstart', onDragStart);
+        img.addEventListener('contextmenu', onContextMenu);
+        img.addEventListener('click', () => showCardDetail(card));
         return img;
       }
+      function updateCounts() { renderPiles(); }
 
-      function updateCounts() {
-        renderPiles();
-      }
-
-      const TYPE_ORDER = { monster: 0, spell: 1, trap: 2 };
       function cardTypeOrder(card) {
-        const t = (card.type || "").toLowerCase();
-        if (t.includes("monster")) return 0;
-        if (t.includes("spell")) return 1;
-        if (t.includes("trap")) return 2;
-        return 3;
+        const t = (card.type||'').toLowerCase();
+        return t.includes('monster') ? 0 : t.includes('spell') ? 1 : t.includes('trap') ? 2 : 3;
       }
       function sortByTypeAndName(arr) {
-        return [...arr].sort((a, b) => {
-          const td = cardTypeOrder(a) - cardTypeOrder(b);
-          if (td !== 0) return td;
-          return (a.name || "").localeCompare(b.name || "", "ja");
+        return [...arr].sort((a,b) => {
+          const td = cardTypeOrder(a)-cardTypeOrder(b);
+          return td !== 0 ? td : (a.name||'').localeCompare(b.name||'','ja');
         });
       }
 
       function renderPiles() {
-        const q = getSearchQueries();
-        const hasQuery = Object.values(q).some(Boolean);
-
+        const q = getSearchQueries(), hasQ = Object.values(q).some(Boolean);
         function sortWithHit(arr, sortFn) {
-          const sorted = sortFn(arr);
-          if (!hasQuery) return sorted;
-          return [
-            ...sorted.filter(c => matchCard(c, q)),
-            ...sorted.filter(c => !matchCard(c, q)),
-          ];
+          const s = sortFn(arr);
+          return hasQ ? [...s.filter(c=>matchCard(c,q)), ...s.filter(c=>!matchCard(c,q))] : s;
         }
-
-        function appendCards(pile, cards, zone, ctxFn) {
-          pile.innerHTML = "";
-          cards.forEach((card, i) => {
+        function appendCards(pileEl, cards, zone, ctxFn) {
+          pileEl.innerHTML = '';
+          cards.forEach((card,i) => {
             const img = makePileImg(card, zone);
-            if (zone === "grave") img.dataset.idx = i;
-            if (hasQuery && matchCard(card, q)) img.classList.add("highlight-card");
-            img.addEventListener("contextmenu", (e) => {
-              e.preventDefault();
-              ctxFn(card, i, e);
-            });
-            pile.appendChild(img);
+            if (hasQ && matchCard(card,q)) img.classList.add('highlight-card');
+            img.addEventListener('contextmenu', e => { e.preventDefault(); ctxFn(card,i,e); });
+            pileEl.appendChild(img);
           });
         }
-
-        // デッキ（モンスター→魔法→罠、各50音順、ヒット優先）
-        const deckPile = document.getElementById("deck-pile");
-        document.getElementById("deck-count").textContent = deck.length;
-        appendCards(deckPile, sortWithHit(deck, sortByTypeAndName), "deck",
-          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "deck" }; showCtxMenu(e); });
-
-        // 墓地（ヒット優先→上に）
-        const gravePile = document.getElementById("grave-pile");
-        document.getElementById("grave-count").textContent = graveyard.length;
-        appendCards(gravePile, sortWithHit(graveyard, a => [...a]), "grave",
-          (card, i, e) => { ctxTarget = { uid: card.uid, zone: "grave" }; graveCtxIdx = i; showCtxMenu(e); });
-
-        // 除外（ヒット優先→上に）
-        const removedPile = document.getElementById("removed-pile");
-        document.getElementById("removed-count").textContent = removed.length;
-        appendCards(removedPile, sortWithHit(removed, a => [...a]), "removed",
-          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "removed" }; showCtxMenu(e); });
-
-        // EXデッキ（50音順、ヒット優先）
-        const extraPile = document.getElementById("extra-pile");
-        document.getElementById("extra-count").textContent = extraDeck.length;
-        appendCards(extraPile,
-          sortWithHit(extraDeck, a => [...a].sort((x, y) => (x.name||"").localeCompare(y.name||"","ja"))),
-          "extra",
-          (card, _, e) => { ctxTarget = { uid: card.uid, zone: "extra" }; showCtxMenu(e); });
+        // VSモード時は grave-pile-vs / removed-pile-vs を使う
+        const gravePileId   = vsMode ? 'grave-pile-vs'   : 'grave-pile';
+        const removedPileId = vsMode ? 'removed-pile-vs' : 'removed-pile';
+        const graveCntId    = vsMode ? 'grave-count-vs'  : 'grave-count';
+        const removedCntId  = vsMode ? 'removed-count-vs': 'removed-count';
+        const piles = [
+          { id:'deck-pile',     cntId:'deck-count',        arr:deck,         zone:'deck',        sort:sortByTypeAndName,
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'deck'};        showCtxMenu(e); } },
+          { id:gravePileId,     cntId:graveCntId,          arr:graveyard,    zone:'grave',       sort:a=>[...a],
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'grave'};       showCtxMenu(e); } },
+          { id:removedPileId,   cntId:removedCntId,        arr:removed,      zone:'removed',     sort:a=>[...a],
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'removed'};     showCtxMenu(e); } },
+          { id:'extra-pile',    cntId:'extra-count',       arr:extraDeck,    zone:'extra',       sort:a=>[...a].sort((x,y)=>(x.name||'').localeCompare(y.name||'','ja')),
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'extra'};       showCtxMenu(e); } },
+          { id:'opp-deck-pile', cntId:'opp-deck-count',   arr:oppDeck,      zone:'opp-deck',    sort:sortByTypeAndName,
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'opp-deck'};    showCtxMenu(e); } },
+          { id:'opp-grave-pile',cntId:'opp-grave-count',  arr:oppGraveyard, zone:'opp-grave',   sort:a=>[...a],
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'opp-grave'};   showCtxMenu(e); } },
+          { id:'opp-removed-pile',cntId:'opp-removed-count',arr:oppRemoved, zone:'opp-removed', sort:a=>[...a],
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'opp-removed'}; showCtxMenu(e); } },
+          { id:'opp-extra-pile',cntId:'opp-extra-count',  arr:oppExtraDeck, zone:'opp-extra',   sort:a=>[...a].sort((x,y)=>(x.name||'').localeCompare(y.name||'','ja')),
+            ctx:(c,_,e)=>{ ctxTarget={uid:c.uid,zone:'opp-extra'};   showCtxMenu(e); } },
+        ];
+        piles.forEach(p => {
+          const el = document.getElementById(p.id);
+          if (!el) return;
+          if (p.cntId) document.getElementById(p.cntId).textContent = p.arr.length;
+          appendCards(el, sortWithHit(p.arr, p.sort), p.zone, p.ctx);
+        });
       }
 
       function makePileImg(card, zone) {
-        const img = document.createElement("img");
-        img.src = card.imageUrl || "";
-        img.alt = card.name;
-        img.title = card.name;
-        img.draggable = true;
-        img.dataset.uid = card.uid;
-        img.dataset.zone = zone;
-        img.addEventListener("dragstart", onDragStart);
-        img.addEventListener("click", () => showCardDetail(card));
+        const img = document.createElement('img');
+        img.src = card.imageUrl||''; img.alt = card.name; img.title = card.name;
+        img.draggable = true; img.dataset.uid = card.uid; img.dataset.zone = zone;
+        img.addEventListener('dragstart', onDragStart);
+        img.addEventListener('click', () => showCardDetail(card));
         return img;
       }
 
       // ===== Drag & Drop =====
       let dragData = null;
-
       function onDragStart(e) {
-        const el = e.target;
-        dragData = {
-          uid: el.dataset.uid,
-          zone: el.dataset.zone,
-          idx: el.dataset.idx !== undefined ? parseInt(el.dataset.idx) : -1,
-        };
-        e.dataTransfer.effectAllowed = "move";
+        dragData = { uid: e.target.dataset.uid, zone: e.target.dataset.zone };
+        e.dataTransfer.effectAllowed = 'move';
       }
-
-      // ドロップ先を登録（フィールドゾーン・手札・pile-grid）
       function setupDropTargets() {
-        document
-          .querySelectorAll(".zone[data-zone], .side-zone[data-zone]")
-          .forEach((el) => {
-            el.addEventListener("dragover", (e) => {
-              e.preventDefault();
-              el.classList.add("drag-over");
-            });
-            el.addEventListener("dragleave", () =>
-              el.classList.remove("drag-over"),
-            );
-            el.addEventListener("drop", (e) => {
-              e.preventDefault();
-              el.classList.remove("drag-over");
-              if (dragData) {
-                moveCard(dragData, el.dataset.zone);
-                dragData = null;
-              }
-            });
-          });
-
-        document
-          .getElementById("hand-area")
-          .addEventListener("dragover", (e) => e.preventDefault());
-        document.getElementById("hand-area").addEventListener("drop", (e) => {
-          e.preventDefault();
-          if (dragData) {
-            moveCard(dragData, "hand");
-            dragData = null;
-          }
+        const container = getActiveZoneContainer();
+        container.querySelectorAll('.zone[data-zone], .side-zone[data-zone]').forEach(el => {
+          el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+          el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+          el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('drag-over'); if (dragData) { moveCard(dragData, el.dataset.zone); dragData = null; } });
         });
-
-        ["deck-pile", "grave-pile", "removed-pile", "extra-pile"].forEach(
-          (id) => {
-            const el = document.getElementById(id);
-            const toZone = {
-              "deck-pile": "deck",
-              "grave-pile": "grave",
-              "removed-pile": "removed",
-              "extra-pile": "extra",
-            }[id];
-            el.addEventListener("dragover", (e) => {
-              e.preventDefault();
-              el.classList.add("drag-over");
-            });
-            el.addEventListener("dragleave", () =>
-              el.classList.remove("drag-over"),
-            );
-            el.addEventListener("drop", (e) => {
-              e.preventDefault();
-              el.classList.remove("drag-over");
-              if (dragData) {
-                moveCard(dragData, toZone);
-                dragData = null;
-              }
-            });
-          },
-        );
+        ['hand-area','opp-hand-area'].forEach(id => {
+          const el = document.getElementById(id);
+          const zone = id === 'opp-hand-area' ? 'opp-hand' : 'hand';
+          el.addEventListener('dragover', e => e.preventDefault());
+          el.addEventListener('drop', e => { e.preventDefault(); if (dragData) { moveCard(dragData, zone); dragData = null; } });
+        });
+        const zoneMap = {
+          'deck-pile':'deck', 'extra-pile':'extra',
+          'grave-pile':'grave', 'removed-pile':'removed',
+          'grave-pile-vs':'grave', 'removed-pile-vs':'removed',
+          'opp-deck-pile':'opp-deck','opp-grave-pile':'opp-grave','opp-removed-pile':'opp-removed','opp-extra-pile':'opp-extra',
+        };
+        Object.entries(zoneMap).forEach(([id, tz]) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+          el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+          el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('drag-over'); if (dragData) { moveCard(dragData, tz); dragData = null; } });
+        });
       }
 
       function moveCard(from, toZone) {
         if (from.zone === toZone) return;
-
-        // --- 取り出し ---
-        let card = null;
-        let facedown = false,
-          defense = false;
-
-        if (from.zone === "hand") {
-          const idx = hand.findIndex((c) => c.uid === from.uid);
+        let card = null, facedown = false, defense = false;
+        // 元ゾーンがpile系かフィールド系かを取り出し前に記録
+        const fromIsPile = getPile(from.zone) !== null;
+        const pile = getPile(from.zone);
+        if (pile !== null) {
+          const idx = pile.findIndex(c => c.uid === from.uid);
           if (idx === -1) return;
-          card = hand.splice(idx, 1)[0];
-        } else if (from.zone === "deck") {
-          const idx = deck.findIndex((c) => c.uid === from.uid);
-          if (idx === -1) return;
-          card = deck.splice(idx, 1)[0];
-        } else if (from.zone === "grave") {
-          const idx = graveyard.findIndex((c) => c.uid === from.uid);
-          if (idx === -1) return;
-          card = graveyard.splice(idx, 1)[0];
-        } else if (from.zone === "removed") {
-          const idx = removed.findIndex((c) => c.uid === from.uid);
-          if (idx === -1) return;
-          card = removed.splice(idx, 1)[0];
-        } else if (from.zone === "extra") {
-          const idx = extraDeck.findIndex((c) => c.uid === from.uid);
-          if (idx === -1) return;
-          card = extraDeck.splice(idx, 1)[0];
-        } else if (
-          fieldCards[from.zone] &&
-          fieldCards[from.zone].stack.some(e => e.card.uid === from.uid)
-        ) {
+          card = pile.splice(idx, 1)[0];
+        } else if (fieldCards[from.zone]?.stack.some(e => e.card.uid === from.uid)) {
           const stack = fieldCards[from.zone].stack;
           const idx = stack.findIndex(e => e.card.uid === from.uid);
           ({ card, facedown, defense } = stack[idx]);
           stack.splice(idx, 1);
-          if (stack.length === 0) delete fieldCards[from.zone];
+          if (!stack.length) delete fieldCards[from.zone];
           else if (stack.length === 1) { stack[0].facedown = false; stack[0].defense = false; }
           renderZone(from.zone);
         } else return;
 
-        // --- 置き先 ---
-        if (toZone === "hand") {
-          hand.push(card);
-          renderHand();
-        } else if (toZone === "deck") {
-          deck.push(card);
-        } else if (toZone === "grave") {
-          graveyard.push(card);
-        } else if (toZone === "removed") {
-          removed.push(card);
-        } else if (toZone === "extra") {
-          extraDeck.push(card);
+        const toPile = getPile(toZone);
+        if (toPile !== null) {
+          toPile.push(card);
+          if (toZone === 'hand') renderHand();
+          else if (toZone === 'opp-hand') renderOppHand();
         } else {
-          // フィールドゾーン: モンスター/魔法罠はポップアップで表示形式を選択
-          const isMonster = /^(mon-|ex-mon-)/.test(toZone);
-          const isSpellTrap = /^st-/.test(toZone);
-          if ((isMonster || isSpellTrap) && (from.zone === "hand" || from.zone === "deck" || from.zone === "extra" || from.zone === "grave" || from.zone === "removed")) {
-            showPlacePopup(card, toZone, isMonster, from);
-            return;
+          const isMonster   = /^(mon-|ex-mon-|opp-mon-)/.test(toZone);
+          const isSpellTrap = /^(st-|opp-st-)/.test(toZone);
+          if ((isMonster || isSpellTrap) && fromIsPile) {
+            showPlacePopup(card, toZone, isMonster, from); return;
           }
           if (!fieldCards[toZone]) fieldCards[toZone] = { stack: [] };
-          // 既存スタックの全カードを表の縦に正規化
           fieldCards[toZone].stack.forEach(e => { e.facedown = false; e.defense = false; });
           fieldCards[toZone].stack.push({ card, facedown, defense });
           renderZone(toZone);
         }
-
-        if (from.zone === "hand" || toZone === "hand") renderHand();
+        if (from.zone === 'hand' || toZone === 'hand') renderHand();
+        if (from.zone === 'opp-hand' || toZone === 'opp-hand') renderOppHand();
         renderPiles();
       }
 
@@ -1307,246 +951,172 @@
         ctxTarget = { uid: e.target.dataset.uid, zone: e.target.dataset.zone };
         showCtxMenu(e);
       }
-
-      document.addEventListener("click", () => {
-        document.getElementById("ctx-menu").style.display = "none";
-      });
+      document.addEventListener('click', () => document.getElementById('ctx-menu').style.display = 'none');
 
       function ctxAction(action) {
-        document.getElementById("ctx-menu").style.display = "none";
+        document.getElementById('ctx-menu').style.display = 'none';
         if (!ctxTarget) return;
         const { uid, zone } = ctxTarget;
+        const isOpp = zone.startsWith('opp-');
+        const grave = isOpp ? oppGraveyard : graveyard;
+        const deckArr = isOpp ? oppDeck : deck;
+        const removedArr = isOpp ? oppRemoved : removed;
 
-        if (action === "toggle-face") {
-          if (fieldCards[zone]) {
-            const entry = fieldCards[zone].stack.find(e => e.card.uid === uid);
-            if (entry) { entry.facedown = !entry.facedown; renderZone(zone); }
-          }
-          return;
+        if (action === 'toggle-face') {
+          const entry = fieldCards[zone]?.stack.find(e => e.card.uid === uid);
+          if (entry) { entry.facedown = !entry.facedown; renderZone(zone); } return;
         }
-        if (action === "toggle-def") {
-          if (fieldCards[zone]) {
-            const entry = fieldCards[zone].stack.find(e => e.card.uid === uid);
-            if (entry) { entry.defense = !entry.defense; renderZone(zone); }
-          }
-          return;
+        if (action === 'toggle-def') {
+          const entry = fieldCards[zone]?.stack.find(e => e.card.uid === uid);
+          if (entry) { entry.defense = !entry.defense; renderZone(zone); } return;
         }
 
-        // 現在場所から取り出す
         let card = null;
-        if (zone === "hand") {
-          const idx = hand.findIndex((c) => c.uid === uid);
+        const pile = getPile(zone);
+        if (pile !== null) {
+          const idx = pile.findIndex(c => c.uid === uid);
           if (idx === -1) return;
-          card = hand.splice(idx, 1)[0];
-          renderHand();
-        } else if (zone === "deck") {
-          const idx = deck.findIndex((c) => c.uid === uid);
-          if (idx === -1) return;
-          card = deck.splice(idx, 1)[0];
-        } else if (zone === "grave") {
-          const idx = graveyard.findIndex((c) => c.uid === uid);
-          if (idx === -1) return;
-          card = graveyard.splice(idx, 1)[0];
-        } else if (zone === "removed") {
-          const idx = removed.findIndex((c) => c.uid === uid);
-          if (idx === -1) return;
-          card = removed.splice(idx, 1)[0];
-        } else if (zone === "extra") {
-          const idx = extraDeck.findIndex((c) => c.uid === uid);
-          if (idx === -1) return;
-          card = extraDeck.splice(idx, 1)[0];
+          card = pile.splice(idx, 1)[0];
+          if (zone === 'hand') renderHand();
+          else if (zone === 'opp-hand') renderOppHand();
         } else if (fieldCards[zone]) {
           const stack = fieldCards[zone].stack;
           const idx = stack.findIndex(e => e.card.uid === uid);
           if (idx !== -1) {
-            card = stack[idx].card;
-            stack.splice(idx, 1);
-            if (stack.length === 0) delete fieldCards[zone];
+            card = stack[idx].card; stack.splice(idx, 1);
+            if (!stack.length) delete fieldCards[zone];
             else if (stack.length === 1) { stack[0].facedown = false; stack[0].defense = false; }
             renderZone(zone);
           }
         }
         if (!card) return;
 
-        if (action === "to-hand") {
-          hand.push(card);
-          renderHand();
-        } else if (action === "to-grave") {
-          graveyard.push(card);
-        } else if (action === "to-deck-top") {
-          deck.unshift(card);
-        } else if (action === "to-deck-bottom") {
-          deck.push(card);
-        } else if (action === "remove") {
-          removed.push(card);
-        } else if (action === "to-field") {
-          const zones = ["mon-0", "mon-1", "mon-2", "mon-3", "mon-4"];
-          const empty = zones.find((z) => !fieldCards[z]);
-          if (empty) {
-            fieldCards[empty] = { stack: [{ card, facedown: false, defense: false }] };
-            renderZone(empty);
-          } else {
-            hand.push(card);
-            renderHand();
-            alert("モンスターゾーンが満杯です");
-          }
+        if (action === 'to-hand') { (isOpp ? oppHand : hand).push(card); isOpp ? renderOppHand() : renderHand(); }
+        else if (action === 'to-grave') grave.push(card);
+        else if (action === 'to-deck-top') deckArr.unshift(card);
+        else if (action === 'to-deck-bottom') deckArr.push(card);
+        else if (action === 'remove') removedArr.push(card);
+        else if (action === 'to-field') {
+          const prefix = isOpp ? 'opp-mon-' : 'mon-';
+          const empty = [0,1,2,3,4].map(i=>prefix+i).find(z=>!fieldCards[z]);
+          if (empty) { fieldCards[empty] = { stack: [{ card, facedown:false, defense:false }] }; renderZone(empty); }
+          else { (isOpp?oppHand:hand).push(card); isOpp?renderOppHand():renderHand(); alert('モンスターゾーンが満杯です'); }
         }
         renderPiles();
       }
 
       // ===== Card Detail =====
       function showCardDetail(card) {
-        const panel = document.getElementById("card-detail");
         const info = [
-          card.attribute ? `属性: ${card.attribute}` : "",
-          card.level ? `レベル: ${card.level}` : "",
-          card.race ? `種族: ${card.race}` : "",
-          card.atk !== undefined && card.atk !== ""
-            ? `ATK: ${card.atk} / DEF: ${card.def}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n");
-
-        panel.innerHTML = `
-    <img src="${card.imageUrl}" alt="${card.name}">
-    <div id="card-detail-name">${card.name}</div>
-    ${info ? `<div id="card-detail-info">${info.replace(/\n/g, "<br>")}</div>` : ""}
-    ${card.text ? `<div id="card-detail-text">${card.text}</div>` : ""}
-  `;
+          card.attribute ? `属性: ${card.attribute}` : '',
+          card.level     ? `レベル: ${card.level}`   : '',
+          card.race      ? `種族: ${card.race}`       : '',
+          card.atk !== undefined && card.atk !== '' ? `ATK: ${card.atk} / DEF: ${card.def}` : '',
+        ].filter(Boolean).join('\n');
+        const html = `
+          <img src="${card.imageUrl}" alt="${card.name}">
+          <div class="cd-name">${card.name}</div>
+          ${info ? `<div class="cd-info">${info.replace(/\n/g,'<br>')}</div>` : ''}
+          ${card.text ? `<div class="cd-text">${card.text}</div>` : ''}
+        `;
+        const panelId = vsMode ? 'card-detail-vs' : 'card-detail';
+        document.getElementById(panelId).innerHTML = html;
       }
 
-      // ===== 配置モードポップアップ =====
+      // ===== Place Popup =====
       let pendingPlace = null;
-
       function showPlacePopup(card, toZone, isMonster, from) {
         pendingPlace = { card, toZone, from };
-        const popup = document.getElementById("place-popup");
-        const title = document.getElementById("place-popup-title");
-        const btns = document.getElementById("place-popup-btns");
-        title.textContent = isMonster ? "表示形式を選んでください" : "表示形式を選んでください";
-        btns.innerHTML = "";
+        document.getElementById('place-popup-title').textContent = '表示形式を選んでください';
+        const btns = document.getElementById('place-popup-btns');
+        btns.innerHTML = '';
         const options = isMonster
-          ? [
-              { label: "攻撃表示", facedown: false, defense: false },
-              { label: "守備表示", facedown: false, defense: true },
-              { label: "裏側表示", facedown: true,  defense: true },
-            ]
-          : [
-              { label: "表", facedown: false, defense: false },
-              { label: "裏", facedown: true,  defense: false },
-            ];
+          ? [{ label:'攻撃表示',facedown:false,defense:false},{ label:'守備表示',facedown:false,defense:true},{ label:'裏側表示',facedown:true,defense:true}]
+          : [{ label:'表',facedown:false,defense:false},{ label:'裏',facedown:true,defense:false}];
         options.forEach(opt => {
-          const btn = document.createElement("button");
+          const btn = document.createElement('button');
           btn.textContent = opt.label;
-          btn.style.cssText = "padding:8px;background:#1e3a5f;border:none;border-radius:6px;color:#eee;cursor:pointer;font-size:0.9rem;";
-          btn.onmouseover = () => btn.style.background = "#2a5080";
-          btn.onmouseout  = () => btn.style.background = "#1e3a5f";
+          btn.style.cssText = 'padding:8px;background:#1e3a5f;border:none;border-radius:6px;color:#eee;cursor:pointer;font-size:0.9rem;';
+          btn.onmouseover = () => btn.style.background='#2a5080';
+          btn.onmouseout  = () => btn.style.background='#1e3a5f';
           btn.onclick = () => confirmPlace(opt.facedown, opt.defense);
           btns.appendChild(btn);
         });
-        popup.style.display = "block";
+        document.getElementById('place-popup').style.display = 'block';
       }
-
       function confirmPlace(facedown, defense) {
-        document.getElementById("place-popup").style.display = "none";
+        document.getElementById('place-popup').style.display = 'none';
         if (!pendingPlace) return;
-        const { card, toZone, from } = pendingPlace;
-        pendingPlace = null;
+        const { card, toZone, from } = pendingPlace; pendingPlace = null;
         if (!fieldCards[toZone]) fieldCards[toZone] = { stack: [] };
-        // 既存スタックの全カードを表の縦に正規化
         fieldCards[toZone].stack.forEach(e => { e.facedown = false; e.defense = false; });
         fieldCards[toZone].stack.push({ card, facedown, defense });
         renderZone(toZone);
-        if (from.zone === "hand") renderHand();
+        if (from.zone === 'hand') renderHand();
+        if (from.zone === 'opp-hand') renderOppHand();
         renderPiles();
       }
-
       function cancelPlace() {
-        document.getElementById("place-popup").style.display = "none";
+        document.getElementById('place-popup').style.display = 'none';
         if (!pendingPlace) return;
-        const { card, from } = pendingPlace;
-        pendingPlace = null;
-        // 元の場所に戻す
-        if (from.zone === "hand") {
-          hand.push(card);
-          renderHand();
-        } else if (from.zone === "deck") {
-          deck.push(card);
-          renderPiles();
-        } else if (from.zone === "grave") {
-          graveyard.push(card);
-          renderPiles();
-        } else if (from.zone === "removed") {
-          removed.push(card);
-          renderPiles();
-        } else if (from.zone === "extra") {
-          extraDeck.push(card);
-          renderPiles();
+        const { card, from } = pendingPlace; pendingPlace = null;
+        const pile = getPile(from.zone);
+        if (pile) {
+          pile.push(card);
+          if (from.zone === 'hand') renderHand();
+          else if (from.zone === 'opp-hand') renderOppHand();
+          else renderPiles();
         }
       }
 
       // ===== LP =====
-      function editLP() {
-        document.getElementById("lp-input").value = lp;
-        document.getElementById("lp-editor").style.display = "block";
+      function editLP(side) {
+        lpTarget = side;
+        document.getElementById('lp-editor-title').textContent = side === 'opp' ? '相手LP変更' : '自分LP変更';
+        document.getElementById('lp-input').value = side === 'opp' ? oppLp : lp;
+        document.getElementById('lp-editor').style.display = 'block';
       }
       function applyLP() {
-        lp = parseInt(document.getElementById("lp-input").value) || 0;
-        document.getElementById("lp-val").textContent = lp;
-        document.getElementById("lp-editor").style.display = "none";
+        const val = parseInt(document.getElementById('lp-input').value) || 0;
+        if (lpTarget === 'opp') { oppLp = val; document.getElementById('opp-lp-val').textContent = oppLp; }
+        else                   { lp   = val; document.getElementById('lp-val').textContent = lp; }
+        document.getElementById('lp-editor').style.display = 'none';
       }
 
-      // ===== カード検索・ハイライト =====
+      // ===== Search =====
       let searchMode = 'and';
-
       function setSearchMode(mode) {
         searchMode = mode;
-        document.getElementById('btn-and').classList.toggle('active', mode === 'and');
-        document.getElementById('btn-or').classList.toggle('active', mode === 'or');
+        ['btn-and','btn-or','btn-and-vs','btn-or-vs'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.toggle('active', id.includes(mode));
+        });
         applyHighlight();
       }
-
-      function getSearchQueries() {
-        return {
-          name: document.getElementById("search-name").value.trim(),
-          text: document.getElementById("search-text").value.trim(),
-          attr: document.getElementById("search-attr").value.trim(),
-          race: document.getElementById("search-race").value.trim(),
-          atk:  document.getElementById("search-atk").value.trim(),
-          def:  document.getElementById("search-def").value.trim(),
-        };
-      }
-
       function matchCard(card, q) {
         const checks = [
-          q.name && ((card.name || "").includes(q.name) || (card.ruby || "").includes(q.name)),
-          q.text && (card.text || "").includes(q.text),
-          q.attr && (card.attribute || "").includes(q.attr),
-          q.race && (card.race || "").includes(q.race),
-          q.atk  && String(card.atk  ?? "") === q.atk,
-          q.def  && String(card.def  ?? "") === q.def,
-        ].filter((_, i) => Object.values(q)[i]);
-
+          q.name && ((card.name||'').includes(q.name)||(card.ruby||'').includes(q.name)),
+          q.text && (card.text||'').includes(q.text),
+          q.attr && (card.attribute||'').includes(q.attr),
+          q.race && (card.race||'').includes(q.race),
+          q.atk  && String(card.atk??'')===q.atk,
+          q.def  && String(card.def??'')===q.def,
+        ].filter((_,i) => Object.values(q)[i]);
         if (!checks.length) return false;
         return searchMode === 'and' ? checks.every(Boolean) : checks.some(Boolean);
       }
-
-      function applyHighlight() {
-        renderHand();
-        renderPiles();
-      }
-
+      function applyHighlight() { renderHand(); if (vsMode) renderOppHand(); renderPiles(); }
       function clearAllSearch() {
-        ["search-name","search-text","search-attr","search-race","search-atk","search-def"]
-          .forEach(id => document.getElementById(id).value = "");
-        renderHand();
-        renderPiles();
+        ['search-name','search-text','search-attr','search-race','search-atk','search-def'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+          const elVs = document.getElementById(id+'-vs'); if (elVs) elVs.value = '';
+        });
+        applyHighlight();
       }
 
-      document.addEventListener("DOMContentLoaded", () => {
-        ["search-name","search-text","search-attr","search-race","search-atk","search-def"]
-          .forEach(id => document.getElementById(id).addEventListener("input", applyHighlight));
+      document.addEventListener('DOMContentLoaded', () => {
+        ['search-name','search-text','search-attr','search-race','search-atk','search-def']
+          .forEach(id => document.getElementById(id)?.addEventListener('input', applyHighlight));
       });
     </script>
   </body>
